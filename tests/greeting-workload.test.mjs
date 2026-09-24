@@ -21,12 +21,14 @@ test('greeting evaluation counts whitespace words without interpreting punctuati
     const response = { text, reasoning: 'one two three', finishReason: 'length' };
     assert.deepEqual(workload.evaluate(response, target), {
       reasoningLength: 3, wordCount, pass, truncated: true,
+      failureReason: pass ? null : 'word_count_mismatch',
     });
     assert.equal(response.text, text, 'evaluation must not change the provider response');
   }
   for (const [reasoning, length] of [[null, null], ['', null], ['  ', 0]]) {
     assert.deepEqual(workload.evaluate({ text: 'Hello there', reasoning, finishReason: null }, 2), {
       reasoningLength: length, wordCount: 2, pass: true, truncated: false,
+      failureReason: null,
     });
   }
 });

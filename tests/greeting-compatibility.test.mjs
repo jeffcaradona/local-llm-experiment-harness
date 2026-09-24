@@ -52,7 +52,14 @@ async function runHarness(t, { env = {}, templates, args = ['1'], defaults = fal
   assert.ifError(child.error);
   assert.equal(child.signal, null, child.stderr);
   assert.ok([0, 1, 2].includes(child.status), child.stderr);
-  if (child.status === 2) return { ...child, report: null };
+  if (child.status === 2) {
+    const files = await readdir(outDir).catch((err) => {
+      if (err.code === 'ENOENT') return [];
+      throw err;
+    });
+    const report = files.length ? JSON.parse(await readFile(join(outDir, files[0]), 'utf8')) : null;
+    return { ...child, report };
+  }
   assert.equal(child.stderr, '', `unexpected CLI error: ${child.stderr}`);
   const files = await readdir(outDir);
   assert.equal(files.length, 1, 'one result artifact per invocation');
@@ -173,4 +180,19 @@ test('provider discovery failure exits with the fatal-error status', async (t) =
   const { status, stderr } = await runHarness(t, { env: { HARNESS_TEST_SCENARIO: 'unavailable' } });
   assert.equal(status, 2);
   assert.match(stderr, /Mock provider unavailable/);
+});
+
+test('initial and per-attempt checkpoints precede subsequent model calls', async (t) => {
+  const { status, report } = await runHarness(t, { args: ['3'], env: { HARNESS_TEST_SCENARIO: 'checkpoints' } });
+  assert.equal(status, 0);
+  assert.equal(report.results.length, 3);
+  assert.ok(report.results.every((row) => row.pass));
+});
+
+test('evaluation failures are fatal and do not become provider-error rows', async (t) => {
+  const { status, stderr, report } = await runHarness(t, { env: { HARNESS_TEST_SCENARIO: 'evaluation-error' } });
+  assert.equal(status, 2);
+  assert.match(stderr, /trim is not a function/);
+  assert.equal(report.complete, false);
+  assert.deepEqual(report.results, []);
 });

@@ -88,6 +88,48 @@ test('provider failures need no response fields and missing token usage stays nu
   assert.equal(extractRecords(artifact, 'null.json')[0].completionTokens, null);
 });
 
+test('new telemetry and explicit outcome reasons retain recorded evidence', () => {
+  const artifact = fixture();
+  for (const telemetry of [
+    { promptTokens: 12, reasoningTokens: 3, elapsedMs: 25.5 },
+    { promptTokens: 0, reasoningTokens: 0, elapsedMs: 0 },
+    { promptTokens: null, reasoningTokens: null, elapsedMs: null },
+  ]) {
+    Object.assign(artifact.results[0], telemetry, { failureReason: null });
+    const [record] = extractRecords(artifact, 'new.json');
+    for (const [field, value] of Object.entries(telemetry)) assert.equal(record[field], value);
+    assert.equal(record.passed, true);
+    assert.equal(record.finishReason, 'length');
+    assert.equal(record.failureReason, null);
+  }
+  Object.assign(artifact.results[0], { pass: false, failureReason: 'word_count_mismatch' });
+  assert.equal(extractRecords(artifact, 'new.json')[0].failureReason, 'word_count_mismatch');
+  Object.assign(artifact.results[0], { error: 'HTTP 500', failureReason: 'provider_error', elapsedMs: 17 });
+  const [failed] = extractRecords(artifact, 'new.json');
+  assert.equal(failed.failureReason, 'provider_error');
+  assert.equal(failed.elapsedMs, 17);
+});
+
+test('malformed optional telemetry and contradictory reasons fail with field context', () => {
+  const cases = [
+    ...['promptTokens', 'reasoningTokens'].flatMap((field) =>
+      [-1, 1.5, '12', Infinity, Number.MAX_SAFE_INTEGER + 1].map((value) => [field, value])),
+    ...[-1, '12', Infinity, NaN].map((value) => ['elapsedMs', value]),
+    ...['unknown', 'provider_error', 'word_count_mismatch', 1].map((value) => ['failureReason', value]),
+  ];
+  for (const [field, value] of cases) {
+    const artifact = fixture();
+    artifact.results[0][field] = value;
+    assert.throws(() => extractRecords(artifact, 'bad.json'), (err) =>
+      err.message.startsWith(`bad.json.results[0].${field}: expected`));
+  }
+  for (const [error, failureReason] of [[undefined, null], [undefined, 'provider_error'], ['HTTP 500', 'word_count_mismatch']]) {
+    const artifact = fixture();
+    Object.assign(artifact.results[0], { pass: false, error, failureReason });
+    assert.throws(() => extractRecords(artifact, 'bad.json'), /results\[0\].failureReason/);
+  }
+});
+
 test('unrelated raw fields and summaries do not determine recorded pass/fail', () => {
   const artifact = fixture();
   artifact.matrix = [{ passRate: 0 }];
@@ -231,4 +273,21 @@ test('a newly generated mock-provider artifact flows through the independent ana
   assert.ok(records.every((r) => r.harnessHash === artifact.harnessHash));
   assert.match(records[0].harnessHash, /^[a-f0-9]{16}$/);
   assert.equal(records[0].modelDigest, 'fixture-digest');
+  assert.equal(records[0].promptTokens, 12);
+  assert.equal(records[0].completionTokens, 5);
+  assert.equal(records[0].reasoningTokens, 3);
+  assert.deepEqual(artifact.results[0].usage, {
+    prompt_tokens: 12, completion_tokens: 5, completion_tokens_details: { reasoning_tokens: 3 },
+  });
+  for (const [index, record] of records.entries()) {
+    assert.ok(Number.isFinite(record.elapsedMs) && record.elapsedMs >= 0);
+    assert.equal(record.elapsedMs, artifact.results[index].elapsedMs);
+    assert.equal(record.failureReason, artifact.results[index].failureReason);
+  }
+  for (const index of [2, 3]) {
+    assert.equal(records[index].promptTokens, null);
+    assert.equal(records[index].completionTokens, null);
+    assert.equal(records[index].reasoningTokens, null);
+    assert.equal(artifact.results[index].usage, null);
+  }
 });

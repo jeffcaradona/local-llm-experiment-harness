@@ -1,3 +1,5 @@
+import { performance } from 'node:perf_hooks';
+
 // Preserve the v2.5 provider protocol independently of any workload's rules.
 export async function getModelDigest({ baseUrl, model }) {
   const apiBase = baseUrl.replace(/\/v1\/?$/, '');
@@ -30,6 +32,22 @@ export async function callModel({ baseUrl, model, timeoutMs, prompt, temperature
   const text = (choice?.message?.content ?? '').trim();
   const reasoning = choice?.message?.reasoning ?? null;
   const finishReason = choice?.finish_reason ?? null;
-  const completionTokens = data.usage?.completion_tokens ?? null;
-  return { request: body, text, reasoning, finishReason, completionTokens };
+  const usage = data.usage ?? null;
+  const completionTokens = usage?.completion_tokens ?? null;
+  const promptTokens = usage?.prompt_tokens ?? null;
+  // Support this explicit field only; reasoning word counts are not telemetry.
+  const reasoningTokens = usage?.completion_tokens_details?.reasoning_tokens ?? null;
+  return { request: body, text, reasoning, finishReason, completionTokens, promptTokens, reasoningTokens, usage };
+}
+
+// Keep timing and recoverable errors at the provider boundary. Evaluation and
+// persistence happen outside this catch so their failures remain fatal.
+export async function callModelAttempt(config, now = () => performance.now()) {
+  const started = now();
+  try {
+    const response = await callModel(config);
+    return { response, elapsedMs: now() - started };
+  } catch (err) {
+    return { error: err.message, elapsedMs: now() - started };
+  }
 }

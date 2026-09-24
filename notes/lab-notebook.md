@@ -1,5 +1,44 @@
 # Lab Notebook
 
+## 2026-09-24 — Milestone one, checkpoint 4
+
+Preserve more evidence from each generation without changing the prompts,
+requests, sweep order, seeds, thresholds, or greeting pass/fail rule. New rows
+retain the provider's usage value and explicit prompt/reasoning token fields
+when supplied. Missing telemetry remains null; zero remains zero. Reasoning
+word counts remain distinct from provider token counts.
+
+Attempts now record client-observed elapsed milliseconds around the provider
+call, including response reading and normalization on successful and failed
+calls. This excludes evaluation and persistence and is not a measurement of
+model inference time. Stored failure reasons classify outcomes only: a pass has
+no failure reason, a greeting mismatch is `word_count_mismatch`, and a failed
+provider call is `provider_error`. Evaluation and persistence failures are fatal
+rather than provider-error rows. A length stop still does not veto a word-count
+match. This narrows the old catch boundary for internal evaluation errors.
+
+The independent analysis consumer accepts the additive fields and validates
+their types and reason/verdict consistency. Historical artifacts keep their
+existing interpretation, including derived reasons and null unavailable timing
+and token fields. No retained experiment artifacts were modified.
+
+A small artifact writer exclusively creates an initial incomplete report and
+uses numeric filename suffixes on collisions, including concurrent creation.
+Each invocation checkpoints its own file after every attempt and at completion.
+An empty incomplete report can now remain if evaluation fails on the first call.
+Writes are not crash-atomic and do not provide recovery or resume.
+
+Validation: all 33 deterministic tests and ESLint passed. Tests include controlled
+clock timing, explicit/absent/zero usage, malformed analysis fields, historical
+compatibility, concurrent filename collisions, checkpoint sequencing, and fatal
+evaluation errors. The mock-provider CLI-to-artifact-to-analysis integration is
+the smoke test. No real model calls were made, so this adds no model evidence
+and does not revalidate or explain the target-10 observation.
+
+Next: extract the reusable execution loop in checkpoint 5. Crash-atomic writes,
+recovery, and resumable execution remain deferred, along with the milestone's
+excluded ML, storage, and agent integrations.
+
 ## 2026-09-24 — Milestone one, checkpoint 3
 
 Add an independent consumer of saved greeting v2.5 artifacts. It validates the

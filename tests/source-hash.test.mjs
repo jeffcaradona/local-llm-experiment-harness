@@ -11,6 +11,7 @@ test('source identity covers extracted modules and changes when workload source 
   const original = await sourceIdentity();
   assert.deepEqual(Object.keys(original.sourceHashes), [
     'greeting-harness-v2.5.mjs',
+    'src/harness/artifact-writer.mjs',
     'src/harness/provider.mjs',
     'src/harness/source-hash.mjs',
     'workloads/greeting/workload.mjs',

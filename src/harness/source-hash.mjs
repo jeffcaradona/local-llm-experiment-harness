@@ -8,6 +8,7 @@ const hash = (value) => createHash('sha256').update(value).digest('hex').slice(0
 const root = new URL('../../', import.meta.url);
 const sourcePaths = [
   'greeting-harness-v2.5.mjs',
+  'src/harness/artifact-writer.mjs',
   'src/harness/provider.mjs',
   'src/harness/source-hash.mjs',
   'workloads/greeting/workload.mjs',

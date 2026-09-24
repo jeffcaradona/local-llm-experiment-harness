@@ -50,11 +50,20 @@ export function extractRecords(artifact, source) {
     requireString(row.template, `${path}.template`);
     requireValue(typeof row.prompt === 'string', `${path}.prompt`, 'a string');
     requireValue(typeof row.pass === 'boolean', `${path}.pass`, 'a boolean');
-    if (row.completionTokens != null) {
-      requireInteger(row.completionTokens, `${path}.completionTokens`, 0);
+    for (const field of ['promptTokens', 'completionTokens', 'reasoningTokens']) {
+      if (row[field] != null) requireInteger(row[field], `${path}.${field}`, 0);
+    }
+    if (row.elapsedMs != null) {
+      requireValue(Number.isFinite(row.elapsedMs) && row.elapsedMs >= 0, `${path}.elapsedMs`, 'a finite number >= 0');
     }
     const finishReason = optionalString(row.finishReason, `${path}.finishReason`);
     const error = optionalString(row.error, `${path}.error`);
+    // Legacy files lack a reason. New reasons must agree with the saved verdict
+    // and error, without reevaluating text or interpreting a length stop as failure.
+    const legacyReason = row.pass ? null : error !== null ? 'provider_error' : 'word_count_mismatch';
+    if (row.failureReason !== undefined) {
+      requireValue(row.failureReason === legacyReason, `${path}.failureReason`, JSON.stringify(legacyReason));
+    }
 
     return {
       source,
@@ -74,16 +83,13 @@ export function extractRecords(artifact, source) {
       prompt: row.prompt,
       run: row.run,
       seed: row.seed,
-      // v2.5 stores completion tokens only. Reasoning word counts and invocation
-      // timestamps cannot establish reasoning tokens or per-attempt elapsed time.
-      promptTokens: null,
+      // Absent legacy telemetry stays unavailable; never derive it from text.
+      promptTokens: row.promptTokens ?? null,
       completionTokens: row.completionTokens ?? null,
-      reasoningTokens: null,
-      elapsedMs: null,
+      reasoningTokens: row.reasoningTokens ?? null,
+      elapsedMs: row.elapsedMs ?? null,
       passed: row.pass,
-      // Preserve the recorded verdict, including a pass with finishReason=length.
-      // This reason is derived from v2.5 semantics, not a new raw observation.
-      failureReason: row.pass ? null : error !== null ? 'provider_error' : 'word_count_mismatch',
+      failureReason: row.failureReason === undefined ? legacyReason : row.failureReason,
       error,
       finishReason,
     };

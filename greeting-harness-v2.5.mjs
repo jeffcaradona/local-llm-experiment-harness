@@ -51,8 +51,8 @@
 //        THRESHOLD             (default 0.8) — min acceptable pass rate per condition
 //        TIMEOUT_MS            (default 180000) — per-call timeout
 
-import { writeFile, mkdir } from 'node:fs/promises';
-import { callModel, getModelDigest } from './src/harness/provider.mjs';
+import { createArtifact } from './src/harness/artifact-writer.mjs';
+import { callModelAttempt, getModelDigest } from './src/harness/provider.mjs';
 import { sourceIdentity } from './src/harness/source-hash.mjs';
 import { greetingWorkload } from './workloads/greeting/workload.mjs';
 
@@ -112,17 +112,12 @@ async function main() {
   templates.forEach((t, i) => console.log(`  [${i}] ${t}`));
   console.log('');
 
-  await mkdir(OUT_DIR, { recursive: true });
-  const outPath = `${OUT_DIR}/${startedAt.replace(/[:.]/g, '-')}.json`;
-
   const allResults = [];
   const matrix = [];
-
-  const persist = (finished) =>
-    writeFile(
-      outPath,
-      JSON.stringify(buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }), null, 2)
-    );
+  const report = (finished) =>
+    buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished });
+  const artifact = await createArtifact(OUT_DIR, startedAt, report(false));
+  const persist = (finished) => artifact.persist(report(finished));
 
   for (const target of TARGETS) {
     for (const temperature of TEMPERATURES) {
@@ -134,17 +129,18 @@ async function main() {
           for (let i = 0; i < RUNS_PER_CONDITION; i++) {
             const seed = BASE_SEED + i;
             let row;
-            try {
-              const { request, text, reasoning, finishReason, completionTokens } = await callModel({
-                baseUrl: BASE_URL,
-                model: MODEL,
-                timeoutMs: TIMEOUT_MS,
-                prompt,
-                temperature,
-                seed,
-                maxTokens,
-              });
-              const { wordCount: n, pass, truncated, reasoningLength } =
+            const { response, error, elapsedMs } = await callModelAttempt({
+              baseUrl: BASE_URL,
+              model: MODEL,
+              timeoutMs: TIMEOUT_MS,
+              prompt,
+              temperature,
+              seed,
+              maxTokens,
+            });
+            if (response) {
+              const { request, text, reasoning, finishReason, completionTokens, promptTokens, reasoningTokens, usage } = response;
+              const { wordCount: n, pass, failureReason, truncated, reasoningLength } =
                 greetingWorkload.evaluate({ text, reasoning, finishReason }, target);
               row = {
                 target,
@@ -160,14 +156,19 @@ async function main() {
                 reasoningLength,
                 wordCount: n,
                 pass,
+                failureReason,
                 finishReason,
                 completionTokens,
+                promptTokens,
+                reasoningTokens,
+                usage,
+                elapsedMs,
                 truncated,
               };
               console.log(
                 `target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ${pass ? 'PASS' : 'FAIL'}${truncated ? ' (truncated)' : ''}  ${n} words  reasoning=${reasoningLength ?? 'n/a'} words`
               );
-            } catch (err) {
+            } else {
               row = {
                 target,
                 temperature,
@@ -176,15 +177,21 @@ async function main() {
                 prompt,
                 seed,
                 run: i + 1,
-                error: err.message,
+                error,
                 pass: false,
+                failureReason: 'provider_error',
+                elapsedMs,
+                promptTokens: null,
+                completionTokens: null,
+                reasoningTokens: null,
+                usage: null,
                 truncated: false,
               };
-              console.log(`target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ERROR  ${err.message}`);
+              console.log(`target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ERROR  ${error}`);
             }
             conditionResults.push(row);
             allResults.push(row);
-            await persist(false); // checkpoint after every run so a crash loses at most one call
+            await persist(false); // Save this attempt before starting another call.
           }
 
           matrix.push({
@@ -220,7 +227,7 @@ async function main() {
     });
   }
 
-  console.log(`\nResult file: ${outPath}`);
+  console.log(`\nResult file: ${artifact.path}`);
   console.log(`Script hash: ${identity.scriptHash}`);
 
   process.exit(allPassed ? 0 : 1);

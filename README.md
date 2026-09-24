@@ -23,7 +23,9 @@ reset, request parameters, template fallback, pass/fail semantics, and exit
 statuses. The tests also serve as a CLI smoke test.
 
 Focused module tests cover greeting evaluation and summaries, provider discovery
-and response normalization, and source identity across extracted modules.
+and response normalization, attempt timing, artifact filename collisions, and
+source identity across extracted modules. Analysis tests cover both historical
+and enriched artifacts, including malformed telemetry and failure reasons.
 The preload uses a file URL so CLI tests also work with Windows drive paths.
 
 To run a real experiment against your local provider:
@@ -48,12 +50,14 @@ An empty or missing template file selects the original single template. Other
 supported environment variables are `MODEL`, `OUT_DIR`, `BASE_SEED`, `THRESHOLD`,
 and `TIMEOUT_MS`; defaults are documented in `greeting-harness-v2.5.mjs`.
 
-Each invocation writes a JSON artifact under `results/`, checkpointed after every
-generation. A response passes when its whitespace-delimited word count equals
-the target, even if its finish reason is `length`. The CLI exits with `0` when
+Each invocation creates an initial incomplete JSON artifact under `results/`
+before the first generation, checkpoints after every attempt, and marks the
+artifact complete after the sweep. A response passes when its whitespace-delimited
+word count equals the target, even if its finish reason is `length`. The CLI exits with `0` when
 every condition meets the pass-rate threshold, `1` when any condition falls
-below it, and `2` on a fatal error. A per-generation HTTP error counts as a
-failed attempt and the sweep continues.
+below it, and `2` on a fatal error. A per-generation provider-call error counts as
+a failed attempt and the sweep continues. Evaluation and artifact-writing errors
+are fatal; they are not recorded as provider failures.
 
 Checkpoint 2 adds `workload: "greeting"`, `sourceHashes`, and `harnessHash` to
 new artifacts. `scriptHash` remains the first 16 hexadecimal characters of the
@@ -71,12 +75,13 @@ and reasoning word counts. Reasoning word counts are not token telemetry.
 Current structure:
 
 ```text
-greeting-harness-v2.5.mjs       CLI, configuration, sweep, and artifact writing
+greeting-harness-v2.5.mjs       CLI, configuration, sweep, and report assembly
 prompt-templates.txt           Active v2.5 prompt file
 workloads/greeting/workload.mjs Template loading, rendering, evaluation, summary
 workloads/greeting/prompts/    Unchanged prompt copy
 workloads/greeting/expectations/ Reserved for expectation fixtures
-src/harness/provider.mjs       Provider discovery and generation requests
+src/harness/provider.mjs       Provider calls, usage normalization, attempt timing
+src/harness/artifact-writer.mjs Exclusive artifact creation and checkpoint writes
 src/harness/source-hash.mjs    Identity for all execution source files
 src/analysis/result-records.mjs Artifact validation and pure record extraction
 src/analysis/analyze-results.mjs Independent analysis CLI
@@ -87,11 +92,61 @@ notes/lab-notebook.md          Human interpretation and migration notes
 models/                       Deferred placeholder
 ```
 
-Checkpoint 3 adds independent analysis of existing artifacts. The experiment CLI
-still owns the sweep and greeting-specific console output; a reusable runner,
-richer result evidence, and protection against artifact filename collisions
-remain for later checkpoints. Machine learning and agent integrations are outside
+Checkpoint 3 adds independent analysis of existing artifacts. Checkpoint 4 adds
+provider usage evidence, per-attempt timing, explicit failure reasons, and
+protection against artifact filename collisions. The experiment CLI still owns
+the sweep and greeting-specific console output; extracting a reusable runner is
+planned for checkpoint 5. Machine learning and agent integrations are outside
 milestone one.
+
+## Checkpoint 4 evidence and artifact safety
+
+New fields are additive: the harness remains `greeting-harness-v2.5`, and source
+hashes identify the changed implementation. Prompts, request parameters, sweep
+order, seeds, thresholds, word-count evaluation, and condition summaries retain
+their existing behavior. Historical artifacts are not rewritten.
+
+Each newly saved attempt includes the following fields:
+
+| Field | Meaning |
+| --- | --- |
+| `promptTokens` | Provider `usage.prompt_tokens`, or `null` when unavailable. |
+| `completionTokens` | Existing provider `usage.completion_tokens`, or `null`. |
+| `reasoningTokens` | Provider `usage.completion_tokens_details.reasoning_tokens`, or `null`. |
+| `usage` | The returned provider usage value, without discarding additional details; `null` when unavailable. |
+| `elapsedMs` | Client-observed duration of the provider call in milliseconds, including failed calls. |
+| `failureReason` | `null` for a pass, `word_count_mismatch` for a greeting evaluation failure, or `provider_error` for a failed provider call. |
+
+Token normalization uses only those explicit paths, preserves zero, and performs
+no numeric coercion. Other provider-specific fields remain in `usage` without
+being mapped to normalized counts. The analysis consumer rejects malformed
+normalized counts. It does not derive prompt tokens from totals or reasoning
+tokens from the existing `reasoningLength` word count. Provider errors have null
+usage and token fields because no normalized response was returned.
+
+Timing uses a monotonic clock around the generation call, including request
+construction, communication, response reading, and normalization. It excludes
+model discovery, workload evaluation, console reporting, and artifact writes.
+This measures client-observed latency, not model inference time. Fractional
+milliseconds and zero are valid; tests use a controlled clock rather than
+asserting real-time durations.
+
+Failure reasons classify outcomes, not the cause of a model's behavior. A
+word-count match with a `length` stop still has `pass: true` and
+`failureReason: null`. HTTP, network, timeout, response-reading, and normalization
+errors within the provider call become failed attempts. Evaluation and
+persistence errors exit with status `2`; narrowing this boundary prevents them
+from being mislabeled as provider errors.
+
+Artifact creation uses an exclusive write. The normal filename remains
+`<timestamp>.json`; if that path already exists, creation tries
+`<timestamp>-1.json`, then `-2.json`, and so on. Concurrent invocations therefore
+claim different files, preserving existing evidence. Subsequent awaited writes
+update only the path claimed by that invocation.
+
+Checkpoint replacement is not crash-atomic. An interrupted write can leave a
+partial file; this change does not add recovery, resume, or protection against
+external modification of an active artifact. Those capabilities remain deferred.
 
 ## Analyze saved results
 
@@ -124,19 +179,30 @@ Each record includes:
   available `modelDigest`.
 - Condition and attempt: `workload`, `target`, `temperature`, `maxTokens`,
   `template`, `prompt`, `run`, and `seed`.
-- Evidence: `passed`, `completionTokens`, `finishReason`, and `error`.
-- Derived interpretation: `failureReason` is `null` for a recorded pass,
-  `provider_error` for a failed row with an error, otherwise `word_count_mismatch`
-  under v2.5's greeting rules. It does not diagnose why the model failed.
+- Evidence: `passed`, available `promptTokens`, `completionTokens`,
+  `reasoningTokens`, `elapsedMs`, `finishReason`, and `error`.
+- Outcome classification: `failureReason` consumes the stored reason when
+  present. For legacy rows without that field, it derives `null` for a recorded
+  pass, `provider_error` for a failed row with an error, otherwise
+  `word_count_mismatch` under v2.5's greeting rules. It does not diagnose why the
+  model failed.
 
 The reader copies `pass` into `passed`; it does not evaluate text again or infer
 failure from truncation. A passing row stopped by `length` still passes. Stored
 summaries and condition thresholds do not override individual attempt verdicts.
 
-Missing or null completion-token usage remains `null`; zero remains zero.
-`promptTokens`, `reasoningTokens`, and `elapsedMs` are always `null` for the current
-v2.5 format, which does not capture them. Reasoning word counts cannot establish
-token counts, and invocation timestamps cannot establish per-attempt timings.
+Missing or null telemetry remains `null`; zero remains zero. Historical artifacts
+without prompt/reasoning tokens or per-attempt timing continue to emit `null` for
+those fields. Token counts must be nonnegative safe integers, and elapsed time
+must be a finite nonnegative number. Reasoning word counts cannot establish token
+counts, and invocation timestamps cannot establish per-attempt timings.
+
+Explicit failure reasons must agree with the saved verdict and error field;
+unknown or contradictory reasons are rejected with source, row, and field
+context. A null reason on a failed row is invalid. Legacy fallback applies only
+when the field is absent. The consumer does not import execution code, inspect
+raw `usage` for alternative counts, or emit it in analysis records; raw provider
+details remain available in the original artifact.
 
 Incomplete checkpoints are accepted with `complete: false`, including an empty
 result list. Only saved attempts are emitted; missing attempts are not fabricated.

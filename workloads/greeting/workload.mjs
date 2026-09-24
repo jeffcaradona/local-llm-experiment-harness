@@ -36,6 +36,7 @@ function evaluate({ text, reasoning, finishReason }, target) {
     reasoningLength: reasoning ? countWords(reasoning) : null,
     wordCount,
     pass: wordCount === target,
+    failureReason: wordCount === target ? null : 'word_count_mismatch',
     // Historical pass is solely word count; truncation does not veto it.
     truncated: finishReason === 'length',
   };

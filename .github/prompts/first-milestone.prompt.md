@@ -1,48 +1,61 @@
-# Project: local-llm-experiment-harness
+<!--
+Document: first-milestone.prompt.md
+Version: 1.0.0
+Updated: 2026-09-23
+Project: local-llm-experiment-harness
+Milestone: 1 - Generalize greeting-harness v2.5 into a reusable experiment harness
+Companion Instructions: AGENTS.md v1.0.0
+-->
+
+# First Milestone Prompt
+
+## Project
 
 We are starting a new Node.js project called `local-llm-experiment-harness`.
 
-The repository already has the basic directory structure. Before making changes, inspect the repository and describe what currently exists.
+Before making changes:
+
+1. read `AGENTS.md`
+2. inspect the repository
+3. inspect the existing `greeting-harness-v2.5.mjs` implementation if present
+4. describe what currently exists
+
+Repository-wide architecture, coding style, testing discipline, reproducibility rules, and agent behavior are defined in `AGENTS.md`.
+
+This prompt defines only the scope and acceptance criteria for milestone one.
 
 ## Background
 
 This project grows out of an earlier `greeting-harness-v2.5.mjs`.
 
-That harness was originally built to explore local LLM behavior using a deliberately simple greeting-generation task. It produced useful experimental findings, including a surprising decoding anomaly:
+That harness was originally built to explore local LLM behavior using a deliberately simple greeting-generation task.
 
-* targets tested: `2,4,6,7,8,9,10,11,12,13`
-* temperatures: `0` and `0.7`
-* max tokens: `3200`
-* at `temperature=0`, all tested targets passed except `target=10`
-* `target=10` consistently truncated/failed
-* neighboring `target=9` and `target=11` passed
-* `target=10` recovered at `temperature=0.7`
+It produced a notable finding under this sweep:
 
-The conclusion was that this was not a simple capacity threshold but an isolated/jagged greedy-decoding failure.
+- targets: `2,4,6,7,8,9,10,11,12,13`
+- temperatures: `0` and `0.7`
+- max tokens: `3200`
 
-The new project should preserve the ability to reproduce that experiment while generalizing the harness so that "greeting" becomes merely the first workload.
+Observed behavior:
 
-## Architectural intent
+- at `temperature=0`, all tested targets passed except `target=10`
+- `target=10` consistently truncated/failed
+- neighboring `target=9` and `target=11` passed
+- `target=10` recovered at `temperature=0.7`
 
-Keep the project deliberately understandable.
+The current interpretation is that this was not a simple capacity threshold but an isolated or jagged greedy-decoding failure.
 
-Preferred style:
+Milestone one must preserve the ability to reproduce and analyze that experiment.
 
-* Node.js
-* ESM
-* imperative shell / functional core
-* deterministic behavior where practical
-* small functions
-* explicit data structures
-* comments that explain design intent rather than restating code
-* junior-readable implementation
-* avoid frameworks unless they solve a real problem
+## Goal
 
-Do not prematurely introduce abstractions merely because multiple workloads may exist someday.
+Establish the reusable experiment-harness boundary while preserving the existing greeting experiment.
 
-The project should make experiments reproducible and leave clean seams for later analysis.
+The greeting task becomes the first workload rather than the identity of the whole harness.
 
-## Initial conceptual structure
+Do not add machine learning in this milestone.
+
+## Expected Conceptual Structure
 
 The repository should support concepts roughly like:
 
@@ -64,56 +77,31 @@ src/
   classifier/
 ```
 
-Do not assume every directory must contain implementation code during milestone one.
+Do not force implementation into every directory.
 
-The intended separation is:
+Empty or future-facing directories may remain placeholders when that keeps the milestone smaller.
 
-```text
-harness
-  executes experiments
-       |
-       v
-results/
-  machine-generated evidence
-       |
-       +------> analysis
-       |
-       +------> classifier (later)
-
-models/
-  trained model artifacts (later)
-
-notes/
-  human-written lab notebook / interpretation
-```
-
-A critical architectural rule is:
-
-> Downstream analysis and classifiers may consume harness results, but the experiment harness must not depend on them.
-
-## Milestone One
-
-The goal is to establish the reusable experiment-harness boundary while preserving the existing greeting experiment.
-
-Do NOT add machine learning yet.
+## Required Work
 
 ### 1. Preserve v2.5 behavior
 
 Bring the existing `greeting-harness-v2.5.mjs` behavior into this repository with the smallest reasonable changes.
 
-The original prompts should initially remain unchanged.
+The original prompts must initially remain unchanged.
 
-Do not "improve" the experiment prompt while restructuring the code because we need historical comparability.
+Do not improve, rewrite, simplify, or retune the prompt while restructuring the project.
+
+Historical comparability matters more than stylistic cleanup.
 
 ### 2. Make greeting a workload
 
 Extract only enough structure so the greeting experiment is recognizably a workload rather than the identity of the entire harness.
 
-We should eventually be able to add another workload without cloning the entire harness implementation.
+A second workload should be addable later without cloning the entire harness implementation.
 
-Avoid building a generic plugin framework.
+Do not build a plugin system, registry framework, dependency-injection container, or other generalized workload architecture.
 
-Prefer a simple explicit workload definition.
+Prefer one explicit workload definition and one clear execution path.
 
 ### 3. Preserve experiment parameters
 
@@ -128,46 +116,48 @@ MAX_TOKENS_LIST
 
 Preserve deterministic ordering of experimental combinations.
 
+If additional existing configuration is required for v2.5 compatibility, preserve it as well.
+
 ### 4. Preserve raw experimental evidence
 
 Each experiment run should produce machine-readable JSON sufficient for later independent analysis.
 
-Results should retain, where available:
+Retain, where actually available:
 
-* timestamp
-* workload
-* harness/version information
-* model
-* target
-* temperature
-* max token setting
-* prompt/template identity
-* generated output
-* pass/fail
-* failure classification/reason
-* elapsed time
-* token usage
-* finish/stop reason
-* any reasoning-token information available from the provider
+- timestamp
+- workload
+- harness/version information
+- model
+- target
+- temperature
+- max token setting
+- prompt/template identity
+- generated output
+- pass/fail
+- failure classification or reason
+- elapsed time
+- token usage
+- finish/stop reason
+- reasoning-token information exposed by the provider
 
 Do not invent unavailable telemetry.
 
-Raw evidence should not depend on future classifier-specific fields.
+Do not add classifier-specific fields to the raw evidence format.
 
-### 5. Add a stable analysis seam
+### 5. Add the first downstream analysis seam
 
-Create the smallest useful downstream consumer of result files.
+Create the smallest useful consumer of result files.
 
-For milestone one this should NOT perform ML.
+It must not perform machine learning.
 
 It should:
 
 1. read one or more result JSON artifacts
-2. validate the minimum structure it needs
-3. deterministically extract a simple row/record suitable for later analysis
-4. print or emit those records in a stable order
+2. validate the minimum structure it requires
+3. deterministically extract a simple analysis record
+4. print or emit those records in stable order
 
-Example future feature fields might include:
+Useful fields may include:
 
 ```text
 workload
@@ -182,15 +172,15 @@ passed
 failureReason
 ```
 
-Do not force fields that the current artifacts cannot provide.
+Only use fields the current artifacts can support.
 
-This analysis path should consume result artifacts without importing or depending on the execution path of the harness.
+The analysis path must consume result artifacts independently of the harness execution path.
 
 ### 6. npm scripts
 
 Provide clear scripts in `package.json`.
 
-Something along these lines is desirable:
+The desired command surface is approximately:
 
 ```text
 npm run experiment:greeting
@@ -200,7 +190,7 @@ npm test
 
 Choose exact names after inspecting the repository.
 
-Do not add classifier scripts yet unless placeholders already exist and removing them would be counterproductive.
+Do not add classifier-training or prediction scripts in this milestone unless they already exist and removing them would be counterproductive.
 
 ### 7. Lab notebook
 
@@ -210,130 +200,76 @@ Create or preserve:
 notes/lab-notebook.md
 ```
 
-This is human-authored experimental reasoning, not generated output.
+Add a concise initial entry documenting:
 
-Add a short initial entry documenting:
+- migration/generalization from greeting-harness v2.5
+- the known `target=10`, `temperature=0` observation
+- the immediate next question: create stable experiment artifacts suitable for downstream statistical or classification analysis
 
-* migration/generalization from greeting-harness v2.5
-* the known target=10 / temperature=0 observation
-* the immediate next question: create stable experiment artifacts suitable for downstream statistical/classification analysis
+The notebook is human-authored interpretation, not generated experiment output.
 
-Keep it concise.
+## Explicitly Deferred
 
-## Future direction — context only
+Do not implement the following in milestone one:
 
-Do not implement these unless required to establish an obvious seam.
+- machine learning
+- classifiers
+- model training
+- model serialization
+- SQL Server
+- R or Python workflows
+- ONNX
+- MCP integration
+- GitHub Copilot-specific integration
+- TypeScript migration
+- application frameworks
+- generic workload plugin systems
 
-Later milestones are expected to explore:
-
-### Classical ML
-
-A separate results consumer may train models such as:
-
-* binary logistic regression
-* decision trees
-* random forests
-
-Possible first target:
-
-```text
-PASS / FAIL
-```
-
-using only information available before execution, such as:
-
-```text
-target
-temperature
-maxTokens
-prompt size
-model
-```
-
-We want to eventually answer questions like:
-
-> Can the configuration of an experiment predict whether a local LLM run will fail?
-
-The isolated `target=10`, `temperature=0` behavior is intentionally interesting because a simple linear classifier may fail to describe it well.
-
-### Model artifacts
-
-Later, simple models may be serialized as inspectable JSON.
-
-SQL Server may eventually store:
-
-* experiment observations
-* labels
-* metrics
-* model metadata
-* serialized JSON models
-
-The runtime should remain ordinary Node.js. SQL Server Machine Learning Services must NOT become an architectural dependency because it will not be available in all environments.
-
-### R and Python
-
-R/Python may later be used as comparison or learning environments against the same dataset.
-
-They are not runtime dependencies for this project.
-
-### MCP
-
-Much later, a trained classifier might be exposed through an MCP tool for use by GitHub Copilot or other agents.
-
-Do not design the current milestone around MCP.
-
-## Constraints
-
-Do not:
-
-* introduce ML in milestone one
-* introduce a database
-* introduce TypeScript unless the repository already uses it
-* introduce a framework
-* rewrite working behavior merely for stylistic cleanliness
-* alter prompts in ways that invalidate comparison with v2.5
-* mix human interpretation into machine-generated evidence
-* make the harness depend on analysis/classification code
-* invent abstractions for hypothetical future workloads
+These are future directions only.
 
 ## Tests
 
-Add deterministic tests around boundaries that matter.
+Add deterministic tests only where they establish meaningful milestone behavior.
 
-Prioritize things such as:
+Prioritize:
 
-* experiment combination ordering
-* workload configuration
-* result normalization
-* analysis feature extraction
-* malformed/missing result fields
-* preservation of important pass/fail semantics
+- experiment combination ordering
+- workload configuration
+- result normalization
+- analysis feature extraction
+- malformed or missing result fields
+- preservation of important pass/fail semantics
 
-Do not write tests merely to increase test count.
+Do not add tests merely to increase coverage or test count.
 
-## Working method
+## Working Sequence
 
-First:
+Before implementation:
 
 1. inspect the repository
-2. inspect the existing v2.5 implementation if present
-3. explain the smallest proposed milestone-one change set
-4. identify anything in the existing implementation that must remain unchanged for reproducibility
+2. inspect `AGENTS.md`
+3. inspect the existing v2.5 implementation
+4. explain the smallest proposed milestone-one change set
+5. identify behavior that must remain unchanged for reproducibility
 
-Then implement the milestone.
+Then implement the milestone without expanding its scope.
 
 After implementation:
 
-1. run the deterministic tests
-2. run a smoke test that does not require unnecessary model calls where possible
+1. run deterministic tests
+2. run a smoke test that avoids unnecessary model calls where practical
 3. show the final repository structure
-4. summarize what changed
-5. explicitly identify what was intentionally deferred
+4. summarize behavioral changes
+5. summarize structural changes
+6. identify anything intentionally deferred
+7. report anything that could not be validated
 
-Keep the implementation bounded.
+## Success Condition
 
-The success condition for milestone one is not "we built a generic experiment platform."
+Milestone one is successful when:
 
-It is:
+> The original greeting experiment still works, but its results now flow through a clean enough structure that another workload, and later a separate statistical or classification consumer, can be added without redesigning the project.
 
-> The original greeting experiment still works, but its results now flow through a clean enough structure that another workload — and later a separate statistical/classification consumer — can be added without redesigning the project.
+Do not optimize this milestone for a hypothetical future platform.
+
+Optimize it for preserving the existing experiment while establishing one clean reusable seam.

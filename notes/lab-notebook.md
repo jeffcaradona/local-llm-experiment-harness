@@ -1,5 +1,28 @@
 # Lab Notebook
 
+## 2026-09-24 — Milestone one, checkpoint 3
+
+Add an independent consumer of saved greeting v2.5 artifacts. It validates the
+fields it consumes and emits one stable analysis record per recorded attempt,
+retaining source path, row index, experiment identity, condition, and verdict.
+Both retained historical artifacts and newer workload-tagged files are supported.
+No execution code or original prompts change in this checkpoint.
+
+Analysis preserves recorded pass/fail, including passes with a length stop.
+Failure reasons are derived from the saved error field and v2.5 word-count rule;
+they are not new provider observations or explanations for the target-10 effect.
+Unavailable prompt/reasoning tokens and per-attempt elapsed time remain null.
+Incomplete checkpoints retain their incomplete status and only their saved rows.
+
+Deterministic tests cover malformed inputs, provenance, attempt ordering,
+unavailable telemetry, legacy artifacts, and standalone CLI behavior. These
+checks consume existing evidence and synthetic fixtures; no new model evidence
+is collected. The target-10 observation and its interpretation remain unchanged.
+
+Still deferred: reusable execution loop, additional provider telemetry and
+elapsed time, and collision-safe artifact creation. The next execution-side
+checkpoint should preserve richer evidence without changing experiment semantics.
+
 ## 2026-09-24 — Milestone one, checkpoint 2
 
 Extract greeting template loading, rendering, evaluation, and condition summaries

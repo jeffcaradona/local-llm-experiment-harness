@@ -78,7 +78,8 @@ workloads/greeting/prompts/    Unchanged prompt copy
 workloads/greeting/expectations/ Reserved for expectation fixtures
 src/harness/provider.mjs       Provider discovery and generation requests
 src/harness/source-hash.mjs    Identity for all execution source files
-src/analysis/                 Independent-analysis placeholder
+src/analysis/result-records.mjs Artifact validation and pure record extraction
+src/analysis/analyze-results.mjs Independent analysis CLI
 src/classifier/               Deferred placeholder
 tests/                        CLI and module tests, plus mock provider
 results/                      Experiment evidence
@@ -86,10 +87,61 @@ notes/lab-notebook.md          Human interpretation and migration notes
 models/                       Deferred placeholder
 ```
 
-Checkpoint 2 separates greeting rules and provider calls. The CLI still owns
-the sweep and greeting-specific console output; a reusable runner remains for
-a later checkpoint. Next increments will also preserve richer result evidence,
-protect against artifact filename collisions, and add independent analysis. The existing
-`npm run analyze` script points to a file that is not implemented yet.
-Machine learning and agent integrations are outside
+Checkpoint 3 adds independent analysis of existing artifacts. The experiment CLI
+still owns the sweep and greeting-specific console output; a reusable runner,
+richer result evidence, and protection against artifact filename collisions
+remain for later checkpoints. Machine learning and agent integrations are outside
 milestone one.
+
+## Analyze saved results
+
+Pass one or more explicit JSON paths; no provider or running harness is needed:
+
+```sh
+npm run analyze -- results/2026-09-24T00-46-57-104Z.json results/2026-09-24T01-20-38-508Z.json
+```
+
+The command prints a JSON array with one record per saved attempt, preserving
+file argument order followed by each file's result order. Repeated paths produce
+repeated records. Inputs are never modified. There is no implicit directory scan
+or sorting that could change sweep order.
+
+For machine-readable stdout without npm's script banner, use:
+
+```sh
+node src/analysis/analyze-results.mjs results/2026-09-24T00-46-57-104Z.json
+```
+
+The reader supports `greeting-harness-v2.5` artifacts, both historical files and
+files with the extracted workload identity. A missing `workload` is interpreted
+as `greeting` only for that known harness. Other harnesses or conflicting workload
+identities are rejected until their formats have explicit support.
+
+Each record includes:
+
+- Provenance: `source` (the supplied path), zero-based `resultIndex`, `harness`,
+  available `scriptHash` and `harnessHash`, `startedAt`, `complete`, `model`, and
+  available `modelDigest`.
+- Condition and attempt: `workload`, `target`, `temperature`, `maxTokens`,
+  `template`, `prompt`, `run`, and `seed`.
+- Evidence: `passed`, `completionTokens`, `finishReason`, and `error`.
+- Derived interpretation: `failureReason` is `null` for a recorded pass,
+  `provider_error` for a failed row with an error, otherwise `word_count_mismatch`
+  under v2.5's greeting rules. It does not diagnose why the model failed.
+
+The reader copies `pass` into `passed`; it does not evaluate text again or infer
+failure from truncation. A passing row stopped by `length` still passes. Stored
+summaries and condition thresholds do not override individual attempt verdicts.
+
+Missing or null completion-token usage remains `null`; zero remains zero.
+`promptTokens`, `reasoningTokens`, and `elapsedMs` are always `null` for the current
+v2.5 format, which does not capture them. Reasoning word counts cannot establish
+token counts, and invocation timestamps cannot establish per-attempt timings.
+
+Incomplete checkpoints are accepted with `complete: false`, including an empty
+result list. Only saved attempts are emitted; missing attempts are not fabricated.
+Validation checks consumed metadata and row fields, not the full raw artifact.
+Errors identify the input path and, for invalid row fields, the result index and
+field. All inputs must validate before any JSON is emitted. Success exits with
+`0`, even when records contain failed attempts; input errors exit with `2` and
+leave stdout empty. Use `--help` for usage.

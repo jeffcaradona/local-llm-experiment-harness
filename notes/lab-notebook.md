@@ -1,5 +1,27 @@
 # Lab Notebook
 
+## 2026-09-24 — Milestone one, checkpoint 2
+
+Extract greeting template loading, rendering, evaluation, and condition summaries
+into one explicit workload. Extract provider discovery and generation calls into
+a harness module. The CLI continues to own configuration, ordering, checkpoint
+writes, thresholds, and console reporting. Original prompt files are unchanged.
+
+New artifacts identify the greeting workload and hash all execution source files.
+The historical `scriptHash` field keeps its entry-file meaning; `sourceHashes`
+and `harnessHash` identify the extracted implementation. These are additive
+metadata fields, with no changes to row pass/fail or condition summaries.
+
+Compatibility tests and focused module tests use synthetic provider responses.
+They establish preservation of the tested behavior, not reproduction of the
+target-10 model observation. The existing CLI tests also needed a Windows file
+URL fix for Node's preload argument. No real model calls were made.
+
+Still deferred: reusable execution loop, additional provider telemetry and
+elapsed time, collision-safe artifact creation, and independent result analysis.
+The immediate research question and interpretation from checkpoint 1 remain
+unchanged; this checkpoint adds no new model evidence.
+
 ## 2026-09-24 — Milestone one, checkpoint 1
 
 Begin the migration from greeting-harness v2.5 to a reusable experiment harness

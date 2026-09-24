@@ -51,9 +51,10 @@
 //        THRESHOLD             (default 0.8) — min acceptable pass rate per condition
 //        TIMEOUT_MS            (default 180000) — per-call timeout
 
-import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { callModel, getModelDigest } from './src/harness/provider.mjs';
+import { sourceIdentity } from './src/harness/source-hash.mjs';
+import { greetingWorkload } from './workloads/greeting/workload.mjs';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://redshift:11434/v1';
 const MODEL = process.env.MODEL ?? 'nemotron-3-nano:4b';
@@ -68,81 +69,12 @@ const BASE_SEED = Number(process.env.BASE_SEED ?? 1);
 const THRESHOLD = Number(process.env.THRESHOLD ?? 0.8);
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? 180_000);
 
-const DEFAULT_TEMPLATE = 'Write a greeting with a {target}-word count';
-
-// 0-20 only — this project's targets have never gone past 13, and a full
-// number-to-words library is more machinery than this needs.
-const NUMBER_WORDS = [
-  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
-  'nineteen', 'twenty',
-];
-const spellNumber = (target) => NUMBER_WORDS[target] ?? String(target); // falls back to the numeral past 20
-
-async function loadTemplates() {
-  try {
-    const raw = await readFile(PROMPT_TEMPLATES_FILE, 'utf8');
-    const lines = raw
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith('#'));
-    if (lines.length === 0) throw new Error('template file is empty after stripping comments/blank lines');
-    return { templates: lines, source: PROMPT_TEMPLATES_FILE };
-  } catch (err) {
-    console.log(`Could not load ${PROMPT_TEMPLATES_FILE} (${err.code ?? err.message}); falling back to the single default template.`);
-    return { templates: [DEFAULT_TEMPLATE], source: null };
-  }
-}
-
-const promptFor = (template, target) => template.replaceAll('{target}', String(target)).replaceAll('{spelledNumber}', spellNumber(target));
-const countWords = (s) => s.trim().split(/\s+/).filter(Boolean).length;
-
-async function selfHash() {
-  const self = fileURLToPath(import.meta.url);
-  const src = await readFile(self);
-  return createHash('sha256').update(src).digest('hex').slice(0, 16);
-}
-
-async function getModelDigest() {
-  const apiBase = BASE_URL.replace(/\/v1\/?$/, '');
-  const res = await fetch(`${apiBase}/api/tags`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const match = data.models?.find((m) => m.name === MODEL || m.model === MODEL);
-  return match?.digest ?? null;
-}
-
-async function callModel({ prompt, temperature, seed, maxTokens }) {
-  const body = {
-    model: MODEL,
-    messages: [{ role: 'user', content: prompt }],
-    stream: false,
-    temperature,
-    seed,
-    max_tokens: maxTokens,
-    options: { num_predict: maxTokens },
-  };
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  const choice = data.choices?.[0];
-  const text = (choice?.message?.content ?? '').trim();
-  const reasoning = choice?.message?.reasoning ?? null;
-  const finishReason = choice?.finish_reason ?? null;
-  const completionTokens = data.usage?.completion_tokens ?? null;
-  return { request: body, text, reasoning, finishReason, completionTokens };
-}
-
-function buildReport({ scriptHash, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }) {
+function buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }) {
   const failingConditions = matrix.filter((m) => m.passRate < THRESHOLD);
   return {
     harness: 'greeting-harness-v2.5',
-    scriptHash,
+    ...identity,
+    workload: greetingWorkload.id,
     startedAt,
     finishedAt: finished ? new Date().toISOString() : null,
     complete: finished,
@@ -171,10 +103,10 @@ function buildReport({ scriptHash, startedAt, modelDigest, templates, templatesS
 }
 
 async function main() {
-  const scriptHash = await selfHash();
+  const identity = await sourceIdentity();
   const startedAt = new Date().toISOString();
-  const modelDigest = await getModelDigest();
-  const { templates, source: templatesSource } = await loadTemplates();
+  const modelDigest = await getModelDigest({ baseUrl: BASE_URL, model: MODEL });
+  const { templates, source: templatesSource } = await greetingWorkload.loadTemplates(PROMPT_TEMPLATES_FILE);
 
   console.log(`Templates (${templates.length}):`);
   templates.forEach((t, i) => console.log(`  [${i}] ${t}`));
@@ -189,14 +121,14 @@ async function main() {
   const persist = (finished) =>
     writeFile(
       outPath,
-      JSON.stringify(buildReport({ scriptHash, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }), null, 2)
+      JSON.stringify(buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }), null, 2)
     );
 
   for (const target of TARGETS) {
     for (const temperature of TEMPERATURES) {
       for (const maxTokens of MAX_TOKENS_LIST) {
         for (const template of templates) {
-          const prompt = promptFor(template, target);
+          const prompt = greetingWorkload.promptFor(template, target);
           const conditionResults = [];
 
           for (let i = 0; i < RUNS_PER_CONDITION; i++) {
@@ -204,15 +136,16 @@ async function main() {
             let row;
             try {
               const { request, text, reasoning, finishReason, completionTokens } = await callModel({
+                baseUrl: BASE_URL,
+                model: MODEL,
+                timeoutMs: TIMEOUT_MS,
                 prompt,
                 temperature,
                 seed,
                 maxTokens,
               });
-              const n = countWords(text);
-              const pass = n === target;
-              const truncated = finishReason === 'length';
-              const reasoningLength = reasoning ? countWords(reasoning) : null;
+              const { wordCount: n, pass, truncated, reasoningLength } =
+                greetingWorkload.evaluate({ text, reasoning, finishReason }, target);
               row = {
                 target,
                 temperature,
@@ -254,23 +187,12 @@ async function main() {
             await persist(false); // checkpoint after every run so a crash loses at most one call
           }
 
-          const passCount = conditionResults.filter((r) => r.pass).length;
-          const truncatedCount = conditionResults.filter((r) => r.truncated).length;
-          const avgReasoningLength = (() => {
-            const lengths = conditionResults.map((r) => r.reasoningLength).filter((v) => typeof v === 'number');
-            return lengths.length ? Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length) : null;
-          })();
-          const passRate = passCount / RUNS_PER_CONDITION;
           matrix.push({
             target,
             temperature,
             maxTokens,
             template,
-            passCount,
-            truncatedCount,
-            avgReasoningLength,
-            runs: RUNS_PER_CONDITION,
-            passRate,
+            ...greetingWorkload.summarize(conditionResults, RUNS_PER_CONDITION),
           });
         }
       }
@@ -299,7 +221,7 @@ async function main() {
   }
 
   console.log(`\nResult file: ${outPath}`);
-  console.log(`Script hash: ${scriptHash}`);
+  console.log(`Script hash: ${identity.scriptHash}`);
 
   process.exit(allPassed ? 0 : 1);
 }

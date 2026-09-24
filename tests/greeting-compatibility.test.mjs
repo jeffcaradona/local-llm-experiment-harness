@@ -5,9 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { sourceIdentity } from '../src/harness/source-hash.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const provider = fileURLToPath(new URL('./support/mock-provider.mjs', import.meta.url));
+const provider = new URL('./support/mock-provider.mjs', import.meta.url).href;
 const originalTemplate = 'Write a greeting with a {target}-word count';
 const originalTemplates = [
   originalTemplate,
@@ -50,7 +51,9 @@ async function runHarness(t, { env = {}, templates, args = ['1'], defaults = fal
   });
   assert.ifError(child.error);
   assert.equal(child.signal, null, child.stderr);
+  assert.ok([0, 1, 2].includes(child.status), child.stderr);
   if (child.status === 2) return { ...child, report: null };
+  assert.equal(child.stderr, '', `unexpected CLI error: ${child.stderr}`);
   const files = await readdir(outDir);
   assert.equal(files.length, 1, 'one result artifact per invocation');
   const report = JSON.parse(await readFile(join(outDir, files[0]), 'utf8'));
@@ -58,6 +61,9 @@ async function runHarness(t, { env = {}, templates, args = ['1'], defaults = fal
   assert.ok(Number.isFinite(Date.parse(report.startedAt)));
   assert.ok(Number.isFinite(Date.parse(report.finishedAt)));
   assert.match(report.scriptHash, /^[a-f0-9]{16}$/);
+  assert.equal(report.workload, 'greeting');
+  const { scriptHash, harnessHash, sourceHashes } = report;
+  assert.deepEqual({ scriptHash, harnessHash, sourceHashes }, await sourceIdentity());
   return { ...child, report };
 }
 

@@ -17,6 +17,10 @@ up afterward. They protect the original prompts, defaults, sweep order, seed
 reset, request parameters, template fallback, pass/fail semantics, and exit
 statuses. The tests also serve as a CLI smoke test.
 
+Focused module tests cover greeting evaluation and summaries, provider discovery
+and response normalization, and source identity across extracted modules.
+The preload uses a file URL so CLI tests also work with Windows drive paths.
+
 To run a real experiment against your local provider:
 
 ```sh
@@ -46,24 +50,41 @@ every condition meets the pass-rate threshold, `1` when any condition falls
 below it, and `2` on a fatal error. A per-generation HTTP error counts as a
 failed attempt and the sweep continues.
 
+Checkpoint 2 adds `workload: "greeting"`, `sourceHashes`, and `harnessHash` to
+new artifacts. `scriptHash` remains the first 16 hexadecimal characters of the
+entry script's SHA-256 hash. Each `sourceHashes` entry uses the same algorithm
+on the named file's bytes; `harnessHash` hashes the JSON serialization of that
+ordered map. This identifies changes to extracted code as well as the CLI.
+The explicit source list in `src/harness/source-hash.mjs` must include any
+future execution modules. Prompt text remains recorded in the existing fields.
+Historical artifacts are unchanged; their script-only identity still applies.
+
+The extraction preserves experiment behavior, including the current-directory
+default `./prompt-templates.txt`, template fallback, whitespace word counting,
+and reasoning word counts. Reasoning word counts are not token telemetry.
+
 Current structure:
 
 ```text
-greeting-harness-v2.5.mjs       Original CLI, unchanged at checkpoint 1
+greeting-harness-v2.5.mjs       CLI, configuration, sweep, and artifact writing
 prompt-templates.txt           Active v2.5 prompt file
-workloads/greeting/            Prompt copy and expectations placeholder
-src/harness/                  Execution-module placeholder
+workloads/greeting/workload.mjs Template loading, rendering, evaluation, summary
+workloads/greeting/prompts/    Unchanged prompt copy
+workloads/greeting/expectations/ Reserved for expectation fixtures
+src/harness/provider.mjs       Provider discovery and generation requests
+src/harness/source-hash.mjs    Identity for all execution source files
 src/analysis/                 Independent-analysis placeholder
 src/classifier/               Deferred placeholder
-tests/                        CLI compatibility tests and mock provider
+tests/                        CLI and module tests, plus mock provider
 results/                      Experiment evidence
 notes/lab-notebook.md          Human interpretation and migration notes
 models/                       Deferred placeholder
 ```
 
-Checkpoint 1 adds compatibility tests and documentation only. Next increments
-will extract the greeting workload and reusable execution code, preserve richer
-result evidence, and implement an independent analysis consumer. The existing
+Checkpoint 2 separates greeting rules and provider calls. The CLI still owns
+the sweep and greeting-specific console output; a reusable runner remains for
+a later checkpoint. Next increments will also preserve richer result evidence,
+protect against artifact filename collisions, and add independent analysis. The existing
 `npm run analyze` script points to a file that is not implemented yet;
 `npm run lint` also awaits an ESLint configuration. Neither is currently a
 working validation command. Machine learning and agent integrations are outside

@@ -9,7 +9,12 @@ Use Node.js 24 or newer and npm 11. Install development dependencies with
 
 ```sh
 npm test
+npm run lint
 ```
+
+Linting uses ESLint 10's recommended JavaScript rules with Node.js ESM globals.
+The flat configuration in `eslint.config.mjs` excludes generated artifacts and
+local scratch directories.
 
 The compatibility tests launch the existing CLI with a mock provider. They make
 no network or model calls, write results into temporary directories, and clean
@@ -85,7 +90,6 @@ Checkpoint 2 separates greeting rules and provider calls. The CLI still owns
 the sweep and greeting-specific console output; a reusable runner remains for
 a later checkpoint. Next increments will also preserve richer result evidence,
 protect against artifact filename collisions, and add independent analysis. The existing
-`npm run analyze` script points to a file that is not implemented yet;
-`npm run lint` also awaits an ESLint configuration. Neither is currently a
-working validation command. Machine learning and agent integrations are outside
+`npm run analyze` script points to a file that is not implemented yet.
+Machine learning and agent integrations are outside
 milestone one.

@@ -1,4 +1,24 @@
-# Lab Notebook 
+# Lab Notebook
+
+## 2026-09-24 — Milestone one, checkpoint 1
+
+Begin the migration from greeting-harness v2.5 to a reusable experiment harness
+by capturing its existing behavior in deterministic CLI compatibility tests.
+This checkpoint changes no experiment code or prompt wording. Mock responses
+verify execution and artifacts; they do not reproduce model behavior.
+
+The prior observation recorded in the milestone prompt is an isolated failure
+at `target=10`, `temperature=0` with a 3200-token budget, while neighboring
+targets 9 and 11 passed; target 10 recovered at temperature 0.7. An isolated or
+jagged greedy-decoding failure is the current interpretation, not an established
+cause. This checkpoint does not independently revalidate that observation.
+
+The immediate next question is how to preserve stable experiment artifacts for
+downstream statistical or classification analysis while separating the greeting
+workload from execution. Workload extraction, additional available telemetry,
+and independent analysis remain for later manual commit checkpoints. No machine
+learning is planned for this milestone.
+
 
 ## 2026-09-23
 

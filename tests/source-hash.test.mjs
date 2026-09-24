@@ -13,6 +13,7 @@ test('source identity covers extracted modules and changes when workload source 
     'greeting-harness-v2.5.mjs',
     'src/harness/artifact-writer.mjs',
     'src/harness/provider.mjs',
+    'src/harness/runner.mjs',
     'src/harness/source-hash.mjs',
     'workloads/greeting/workload.mjs',
   ]);
@@ -35,4 +36,9 @@ test('source identity covers extracted modules and changes when workload source 
   assert.notEqual(changed.sourceHashes['workloads/greeting/workload.mjs'], original.sourceHashes['workloads/greeting/workload.mjs']);
   assert.equal(changed.sourceHashes['src/harness/provider.mjs'], original.sourceHashes['src/harness/provider.mjs']);
   assert.deepEqual(await copied.sourceIdentity(), changed, 'same source produces the same identity');
+  await writeFile(join(directory, 'src/harness/runner.mjs'), '\n// changed runner\n', { flag: 'a' });
+  const runnerChanged = await copied.sourceIdentity();
+  assert.equal(runnerChanged.scriptHash, changed.scriptHash);
+  assert.notEqual(runnerChanged.harnessHash, changed.harnessHash);
+  assert.notEqual(runnerChanged.sourceHashes['src/harness/runner.mjs'], changed.sourceHashes['src/harness/runner.mjs']);
 });

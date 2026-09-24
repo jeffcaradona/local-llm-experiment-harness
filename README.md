@@ -26,6 +26,8 @@ Focused module tests cover greeting evaluation and summaries, provider discovery
 and response normalization, attempt timing, artifact filename collisions, and
 source identity across extracted modules. Analysis tests cover both historical
 and enriched artifacts, including malformed telemetry and failure reasons.
+Runner tests exercise a separate test-only workload, invocation isolation,
+awaited presentation and checkpoints, and fatal checkpoint-write failures.
 The preload uses a file URL so CLI tests also work with Windows drive paths.
 
 To run a real experiment against your local provider:
@@ -75,12 +77,13 @@ and reasoning word counts. Reasoning word counts are not token telemetry.
 Current structure:
 
 ```text
-greeting-harness-v2.5.mjs       CLI, configuration, sweep, and report assembly
+greeting-harness-v2.5.mjs       CLI configuration, greeting console output, exit status
 prompt-templates.txt           Active v2.5 prompt file
 workloads/greeting/workload.mjs Template loading, rendering, evaluation, summary
 workloads/greeting/prompts/    Unchanged prompt copy
 workloads/greeting/expectations/ Reserved for expectation fixtures
 src/harness/provider.mjs       Provider calls, usage normalization, attempt timing
+src/harness/runner.mjs         Reusable sweep, report assembly, checkpoint lifecycle
 src/harness/artifact-writer.mjs Exclusive artifact creation and checkpoint writes
 src/harness/source-hash.mjs    Identity for all execution source files
 src/analysis/result-records.mjs Artifact validation and pure record extraction
@@ -95,9 +98,69 @@ models/                       Deferred placeholder
 Checkpoint 3 adds independent analysis of existing artifacts. Checkpoint 4 adds
 provider usage evidence, per-attempt timing, explicit failure reasons, and
 protection against artifact filename collisions. The experiment CLI still owns
-the sweep and greeting-specific console output; extracting a reusable runner is
-planned for checkpoint 5. Machine learning and agent integrations are outside
-milestone one.
+configuration and greeting-specific console output; checkpoint 5 moves the sweep
+and report assembly into a reusable runner. Machine learning and agent
+integrations are outside milestone one.
+
+## Checkpoint 5 reusable runner
+
+The existing `npm run experiment:greeting -- <runs>` command now delegates to
+`runExperiment` in `src/harness/runner.mjs`. Its environment variables, defaults,
+prompts, request parameters, sweep order, seed reset, thresholds, greeting
+evaluation, summaries, console output, and exit statuses retain their behavior.
+The artifact fields retain their meanings; JSON object key order is not a
+compatibility guarantee. Source identity now includes the runner. Historical
+artifacts remain unchanged.
+
+The runner is importable without starting an experiment. Call it explicitly:
+
+```js
+import { runExperiment } from './src/harness/runner.mjs';
+
+const { report, artifactPath, allPassed } = await runExperiment({
+  config,
+  workload,
+  identity,
+});
+```
+
+`config` supplies `harness`, `baseUrl`, `model`, `outDir`, `runsPerCondition`,
+`targets`, `temperatures`, `maxTokensList`, `promptTemplatesFile`, `baseSeed`,
+`threshold`, and `timeoutMs`. The runner applies no CLI defaults or environment
+parsing. The greeting entry file shows the complete configuration mapping.
+`identity` supplies the source identity recorded in the artifact; the current
+`sourceIdentity()` helper explicitly lists greeting execution files. Another
+entry point must include its own execution sources in its identity.
+
+A workload is a plain object with the following members:
+
+| Member | Contract |
+| --- | --- |
+| `id` | Workload identity recorded in the artifact. |
+| `loadTemplates(path)` | Returns or resolves to `{ templates, source }`. |
+| `promptFor(template, target)` | Returns the prompt string. |
+| `evaluate(response, target)` | Returns synchronous evaluation fields, including `pass` and `failureReason`; a pass has a null reason. |
+| `summarize(rows, runs)` | Returns synchronous condition summary fields, including `passRate` for threshold comparison. |
+
+Evaluation receives the normalized provider response. Its additional fields are
+retained, while condition identity and provider evidence remain runner-owned.
+Failed provider calls bypass evaluation and produce the existing `provider_error`
+row. Summaries receive all attempts, including those failures.
+
+Optional `onTemplates(templates)`, `onAttempt(row)`, and `onMatrix(matrix)`
+callbacks provide presentation. They are awaited before initial artifact
+creation, each attempt's checkpoint, and the completed report write,
+respectively. Callbacks should treat their arguments as read-only. Errors from
+workload code, callbacks, or persistence reject the run; only provider-call
+errors become failed attempts. The runner returns after the completed artifact
+is saved and never sets an exit status or exits the process.
+
+The sweep remains target, temperature, maximum tokens, template, then run.
+Each invocation owns its result arrays and artifact. This is a reusable boundary
+for that explicit sweep and the existing provider protocol. There is no workload
+registry, new production workload, or generalized sweep configuration. The
+analysis reader still explicitly supports greeting artifacts; another workload
+will need its own analysis support. Crash-atomic writes and resume remain deferred.
 
 ## Checkpoint 4 evidence and artifact safety
 

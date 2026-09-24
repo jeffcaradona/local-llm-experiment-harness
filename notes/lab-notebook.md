@@ -1,5 +1,39 @@
 # Lab Notebook
 
+## 2026-09-24 — Milestone one, checkpoint 5
+
+Move the remaining sweep, report assembly, and checkpoint lifecycle into
+`src/harness/runner.mjs`. The greeting entry file now supplies explicit
+configuration, workload, source identity, and presentation callbacks, and maps
+the returned outcome to the existing exit statuses. The runner can be imported
+without executing an experiment and called again without sharing result state.
+Source hashes now include the runner.
+
+This is a structural extraction. Prompts, defaults, provider requests, condition
+ordering, per-condition seed reset, word-count verdicts, summary calculations,
+thresholds, and checkpoint sequencing retain their behavior. Artifact fields
+retain their meanings, although result object key ordering changes. Provider
+failures still count as failed attempts; evaluation and write errors remain
+fatal. Historical evidence files are unchanged.
+
+Validation: all 36 deterministic tests and ESLint passed. The existing mock CLI
+compatibility tests and CLI-to-artifact-to-analysis smoke test passed. New tests
+exercise exact-text evaluation in a test-only workload, awaited callbacks and
+checkpoints, repeated invocations, and a checkpoint-write failure that stops
+further calls. Source identity tests also verify that a runner edit changes the
+harness hash while preserving the entry script hash.
+
+No real model calls were made for this checkpoint. These checks establish
+execution compatibility for the tested cases, not new evidence about the
+target-10 observation. The earlier real-provider validation applies to
+checkpoint 4.
+
+A second production workload and its analysis support remain future work.
+The runner retains the existing sweep dimensions and provider protocol;
+generic workload registration, crash-atomic writes, recovery, resume, ML,
+storage, and agent integrations remain deferred. Stop here for the manual
+commit checkpoint after testing and documentation.
+
 ## 2026-09-24 — Checkpoint 4 real-provider validation
 
 Run the historical fixed-prompt sweep against the real Ollama endpoint after

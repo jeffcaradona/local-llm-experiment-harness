@@ -51,8 +51,7 @@
 //        THRESHOLD             (default 0.8) — min acceptable pass rate per condition
 //        TIMEOUT_MS            (default 180000) — per-call timeout
 
-import { createArtifact } from './src/harness/artifact-writer.mjs';
-import { callModelAttempt, getModelDigest } from './src/harness/provider.mjs';
+import { runExperiment } from './src/harness/runner.mjs';
 import { sourceIdentity } from './src/harness/source-hash.mjs';
 import { greetingWorkload } from './workloads/greeting/workload.mjs';
 
@@ -69,150 +68,48 @@ const BASE_SEED = Number(process.env.BASE_SEED ?? 1);
 const THRESHOLD = Number(process.env.THRESHOLD ?? 0.8);
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? 180_000);
 
-function buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished }) {
-  const failingConditions = matrix.filter((m) => m.passRate < THRESHOLD);
-  return {
-    harness: 'greeting-harness-v2.5',
-    ...identity,
-    workload: greetingWorkload.id,
-    startedAt,
-    finishedAt: finished ? new Date().toISOString() : null,
-    complete: finished,
-    environment: {
-      nodeVersion: process.version,
-      platform: process.platform,
-      baseUrl: BASE_URL,
-      model: MODEL,
-      modelDigest,
-    },
-    params: {
-      runsPerCondition: RUNS_PER_CONDITION,
-      targets: TARGETS,
-      temperatures: TEMPERATURES,
-      maxTokensList: MAX_TOKENS_LIST,
-      promptTemplatesFile: templatesSource,
-      promptTemplates: templates,
-      baseSeed: BASE_SEED,
-      threshold: THRESHOLD,
-      timeoutMs: TIMEOUT_MS,
-    },
-    matrix,
-    failingConditions,
-    results: allResults,
-  };
+function printAttempt(row) {
+  const { target, temperature, maxTokens, template, seed, pass, truncated, wordCount, reasoningLength, error } = row;
+  if ('error' in row) {
+    console.log(`target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ERROR  ${error}`);
+  } else {
+    console.log(
+      `target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ${pass ? 'PASS' : 'FAIL'}${truncated ? ' (truncated)' : ''}  ${wordCount} words  reasoning=${reasoningLength ?? 'n/a'} words`
+    );
+  }
 }
 
 async function main() {
   const identity = await sourceIdentity();
-  const startedAt = new Date().toISOString();
-  const modelDigest = await getModelDigest({ baseUrl: BASE_URL, model: MODEL });
-  const { templates, source: templatesSource } = await greetingWorkload.loadTemplates(PROMPT_TEMPLATES_FILE);
-
-  console.log(`Templates (${templates.length}):`);
-  templates.forEach((t, i) => console.log(`  [${i}] ${t}`));
-  console.log('');
-
-  const allResults = [];
-  const matrix = [];
-  const report = (finished) =>
-    buildReport({ identity, startedAt, modelDigest, templates, templatesSource, matrix, allResults, finished });
-  const artifact = await createArtifact(OUT_DIR, startedAt, report(false));
-  const persist = (finished) => artifact.persist(report(finished));
-
-  for (const target of TARGETS) {
-    for (const temperature of TEMPERATURES) {
-      for (const maxTokens of MAX_TOKENS_LIST) {
-        for (const template of templates) {
-          const prompt = greetingWorkload.promptFor(template, target);
-          const conditionResults = [];
-
-          for (let i = 0; i < RUNS_PER_CONDITION; i++) {
-            const seed = BASE_SEED + i;
-            let row;
-            const { response, error, elapsedMs } = await callModelAttempt({
-              baseUrl: BASE_URL,
-              model: MODEL,
-              timeoutMs: TIMEOUT_MS,
-              prompt,
-              temperature,
-              seed,
-              maxTokens,
-            });
-            if (response) {
-              const { request, text, reasoning, finishReason, completionTokens, promptTokens, reasoningTokens, usage } = response;
-              const { wordCount: n, pass, failureReason, truncated, reasoningLength } =
-                greetingWorkload.evaluate({ text, reasoning, finishReason }, target);
-              row = {
-                target,
-                temperature,
-                maxTokens,
-                template,
-                prompt,
-                seed,
-                run: i + 1,
-                request,
-                text,
-                reasoning,
-                reasoningLength,
-                wordCount: n,
-                pass,
-                failureReason,
-                finishReason,
-                completionTokens,
-                promptTokens,
-                reasoningTokens,
-                usage,
-                elapsedMs,
-                truncated,
-              };
-              console.log(
-                `target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ${pass ? 'PASS' : 'FAIL'}${truncated ? ' (truncated)' : ''}  ${n} words  reasoning=${reasoningLength ?? 'n/a'} words`
-              );
-            } else {
-              row = {
-                target,
-                temperature,
-                maxTokens,
-                template,
-                prompt,
-                seed,
-                run: i + 1,
-                error,
-                pass: false,
-                failureReason: 'provider_error',
-                elapsedMs,
-                promptTokens: null,
-                completionTokens: null,
-                reasoningTokens: null,
-                usage: null,
-                truncated: false,
-              };
-              console.log(`target=${target} temp=${temperature} max=${maxTokens} tmpl=${JSON.stringify(template)} seed=${seed}  ERROR  ${error}`);
-            }
-            conditionResults.push(row);
-            allResults.push(row);
-            await persist(false); // Save this attempt before starting another call.
-          }
-
-          matrix.push({
-            target,
-            temperature,
-            maxTokens,
-            template,
-            ...greetingWorkload.summarize(conditionResults, RUNS_PER_CONDITION),
-          });
-        }
-      }
-    }
-  }
-
-  const failingConditions = matrix.filter((m) => m.passRate < THRESHOLD);
-  const allPassed = failingConditions.length === 0;
-
-  console.log('\nPass-rate matrix:');
-  console.table(matrix.map((m) => ({ ...m, passRate: `${(m.passRate * 100).toFixed(0)}%` })));
-
-  await persist(true);
+  const { report, artifactPath, allPassed } = await runExperiment({
+    config: {
+      harness: 'greeting-harness-v2.5',
+      baseUrl: BASE_URL,
+      model: MODEL,
+      outDir: OUT_DIR,
+      runsPerCondition: RUNS_PER_CONDITION,
+      targets: TARGETS,
+      temperatures: TEMPERATURES,
+      maxTokensList: MAX_TOKENS_LIST,
+      promptTemplatesFile: PROMPT_TEMPLATES_FILE,
+      baseSeed: BASE_SEED,
+      threshold: THRESHOLD,
+      timeoutMs: TIMEOUT_MS,
+    },
+    workload: greetingWorkload,
+    identity,
+    onTemplates(templates) {
+      console.log(`Templates (${templates.length}):`);
+      templates.forEach((t, i) => console.log(`  [${i}] ${t}`));
+      console.log('');
+    },
+    onAttempt: printAttempt,
+    onMatrix(matrix) {
+      console.log('\nPass-rate matrix:');
+      console.table(matrix.map((m) => ({ ...m, passRate: `${(m.passRate * 100).toFixed(0)}%` })));
+    },
+  });
+  const { matrix, failingConditions } = report;
 
   console.log(`\n${allPassed ? 'ALL CONDITIONS PASSED' : `${failingConditions.length} condition(s) BELOW THRESHOLD (${THRESHOLD})`}`);
 
@@ -227,7 +124,7 @@ async function main() {
     });
   }
 
-  console.log(`\nResult file: ${artifact.path}`);
+  console.log(`\nResult file: ${artifactPath}`);
   console.log(`Script hash: ${identity.scriptHash}`);
 
   process.exit(allPassed ? 0 : 1);

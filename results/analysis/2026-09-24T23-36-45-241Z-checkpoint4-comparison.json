@@ -1,0 +1,261 @@
+{
+  "baseline": {
+    "path": "results/2026-09-24T00-46-57-104Z.json",
+    "sha256": "e1035e1bbd227837f90812298350acd678063383c43d7d207bead1906cb80c4a",
+    "environment": {
+      "nodeVersion": "v24.13.0",
+      "platform": "linux",
+      "baseUrl": "https://ollama.redshift.irrational.cc/v1",
+      "model": "nemotron-3-nano:4b",
+      "modelDigest": "6cc467f054393a55e98a74098abde0c762ffb6d1d8cd64becf30458f38886197"
+    }
+  },
+  "current": {
+    "path": "results/2026-09-24T23-36-45-241Z.json",
+    "sha256": "8af8de4596a40db6dac4f9329235187cb4009542b10a16eb35c324e7a79bb0ff",
+    "environment": {
+      "nodeVersion": "v26.1.0",
+      "platform": "win32",
+      "baseUrl": "https://ollama.redshift.irrational.cc/v1",
+      "model": "nemotron-3-nano:4b",
+      "modelDigest": "6cc467f054393a55e98a74098abde0c762ffb6d1d8cd64becf30458f38886197"
+    },
+    "harnessHash": "e60e8cdc6b3ab1f3"
+  },
+  "checks": {
+    "complete": true,
+    "attempts": 200,
+    "conditions": 20,
+    "parametersMatch": true,
+    "modelDigestMatches": true,
+    "requestsAndOrderingMatch": true,
+    "sourceHashesMatch": true,
+    "analysisExitCode": 0,
+    "analysisRecords": 400
+  },
+  "outcomes": {
+    "baselinePasses": 189,
+    "currentPasses": 189,
+    "providerErrors": 0,
+    "changedVerdicts": 0
+  },
+  "telemetry": {
+    "promptTokens": {
+      "present": 200,
+      "missing": 0
+    },
+    "completionTokens": {
+      "present": 200,
+      "missing": 0
+    },
+    "reasoningTokens": {
+      "present": 0,
+      "missing": 200
+    },
+    "elapsedMs": {
+      "present": 200,
+      "missing": 0
+    }
+  },
+  "outputMatches": [
+    {
+      "temperature": 0,
+      "attempts": 100,
+      "text": 100,
+      "reasoning": 100
+    },
+    {
+      "temperature": 0.7,
+      "attempts": 100,
+      "text": 100,
+      "reasoning": 100
+    }
+  ],
+  "elapsedMs": {
+    "total": 836960.1010999993,
+    "min": 637.1478000000002,
+    "max": 33968.06859999997
+  },
+  "conditions": [
+    {
+      "target": 2,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 2,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 4,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 4,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 6,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 6,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 7,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 7,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 8,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 8,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 9,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 9,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 10,
+      "temperature": 0,
+      "baselinePasses": 0,
+      "currentPasses": 0,
+      "baselineTruncations": 10,
+      "currentTruncations": 10,
+      "runs": 10
+    },
+    {
+      "target": 10,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 11,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 11,
+      "temperature": 0.7,
+      "baselinePasses": 9,
+      "currentPasses": 9,
+      "baselineTruncations": 1,
+      "currentTruncations": 1,
+      "runs": 10
+    },
+    {
+      "target": 12,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 12,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 13,
+      "temperature": 0,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    },
+    {
+      "target": 13,
+      "temperature": 0.7,
+      "baselinePasses": 10,
+      "currentPasses": 10,
+      "baselineTruncations": 0,
+      "currentTruncations": 0,
+      "runs": 10
+    }
+  ]
+}

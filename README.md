@@ -148,6 +148,13 @@ Checkpoint replacement is not crash-atomic. An interrupted write can leave a
 partial file; this change does not add recovery, resume, or protection against
 external modification of an active artifact. Those capabilities remain deferred.
 
+A [real-provider validation](notes/lab-notebook.md#2026-09-24--checkpoint-4-real-provider-validation)
+completed the historical 200-attempt sweep after checkpoint 4. All legacy row
+fields and condition summaries matched the retained baseline, with 189 passes
+and 11 truncated failures. New timing and available token fields were recorded,
+and the independent analysis CLI validated both artifacts. The notebook records
+the commands, artifact links, environment differences, and interpretation limits.
+
 ## Analyze saved results
 
 Pass one or more explicit JSON paths; no provider or running harness is needed:

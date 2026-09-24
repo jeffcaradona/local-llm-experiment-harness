@@ -1,5 +1,89 @@
 # Lab Notebook
 
+## 2026-09-24 — Checkpoint 4 real-provider validation
+
+Run the historical fixed-prompt sweep against the real Ollama endpoint after
+checkpoint 4. The commands under `local/` are scratch/provenance files: their
+relative CLI and output paths assume the repository root as the working
+directory. Execute only the selected sweep block, not the whole command file,
+which also contains a separate default run.
+
+Explicit configuration used from the repository root:
+
+```powershell
+$env:BASE_URL = 'https://ollama.redshift.irrational.cc/v1'
+$env:MODEL = 'nemotron-3-nano:4b'
+$env:TARGETS = '2,4,6,7,8,9,10,11,12,13'
+$env:TEMPERATURES = '0,0.7'
+$env:MAX_TOKENS_LIST = '3200'
+$env:PROMPT_TEMPLATES_FILE = 'NUL'
+$env:BASE_SEED = '1'
+$env:THRESHOLD = '0.8'
+$env:TIMEOUT_MS = '180000'
+$env:OUT_DIR = './results'
+node greeting-harness-v2.5.mjs 10
+```
+
+On this Windows run, reading `NUL` returned `ENOENT`, activating the existing
+single-template fallback. The saved template is exactly
+`Write a greeting with a {target}-word count`. The initial sandboxed connection
+was denied before any generation calls; the authorized network retry completed
+the sweep once.
+
+Evidence:
+
+- [Historical fixed-prompt baseline](../results/2026-09-24T00-46-57-104Z.json).
+- [New checkpoint 4 artifact](../results/2026-09-24T23-36-45-241Z.json).
+- [Derived comparison](../results/analysis/2026-09-24T23-36-45-241Z-checkpoint4-comparison.json),
+  containing input SHA-256 hashes, configuration checks, outcome counts, telemetry
+  availability, and condition comparisons. This is a comparison summary, not a
+  harness artifact accepted by the analysis CLI.
+
+Observed: the run completed 200 attempts across 20 conditions in about 13 minutes
+57 seconds. There were 189 passes, 11 truncated failures, and no provider errors.
+The CLI exited with status `1` because one condition was below the 0.8 threshold;
+the artifact has `complete: true`. This was not an execution failure.
+
+| Condition | Baseline passes | New passes |
+| --- | --- | --- |
+| Target 10, temperature 0 | 0/10 | 0/10 |
+| Target 10, temperature 0.7 | 10/10 | 10/10 |
+| Target 9, temperature 0 | 10/10 | 10/10 |
+| Target 11, temperature 0 | 10/10 | 10/10 |
+| Target 11, temperature 0.7 | 9/10 | 9/10 |
+| Every other condition | 10/10 | 10/10 |
+
+Derived checks: all parameters, the model digest, request bodies, attempt order,
+and every legacy result-row field match the baseline. This includes generated
+text, reasoning text, word counts, completion-token counts, finish reasons, and
+verdicts for all 200 attempts, at both temperatures. The full condition matrix
+and failing-condition list also match. New source hashes match the execution
+files, and both retained baseline artifacts remain unchanged.
+
+New evidence fields work with the real provider: all 200 rows contain prompt
+tokens, completion tokens, and finite nonnegative elapsed milliseconds. All
+reasoning-token counts remain null because the provider did not supply the
+supported field. No reasoning token counts were inferred from text. The ten
+target-10 greedy failures each consumed 3,200 completion tokens, produced no
+output words, and retained `word_count_mismatch` with a `length` stop.
+
+The standalone analysis CLI successfully validated the baseline and new artifact
+together, emitted 400 records in input order, and exited with status `0`:
+
+```sh
+node src/analysis/analyze-results.mjs results/2026-09-24T00-46-57-104Z.json results/2026-09-24T23-36-45-241Z.json
+```
+
+It also successfully consumed an incomplete checkpoint during the live run,
+preserving `complete: false`. Historical unavailable telemetry remains null.
+
+Interpretation: this run supports preservation of the original experiment's
+behavior through checkpoint 4 and reproduces the target-10 observation. It does
+not establish its cause or guarantee identical outcomes under other serving
+conditions. The model digest and endpoint match, but the baseline client was
+Linux/Node v24.13.0 and this client was Windows/Node v26.1.0; server runtime
+identity is not recorded. No harness changes were needed for this check.
+
 ## 2026-09-24 — Milestone one, checkpoint 4
 
 Preserve more evidence from each generation without changing the prompts,

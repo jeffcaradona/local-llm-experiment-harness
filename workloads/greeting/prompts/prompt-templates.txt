@@ -1,0 +1,13 @@
+# One template per line. Blank lines and lines starting with # are ignored.
+# Placeholders: {target} = numeral (e.g. "10"), {spelledNumber} = spelled-out number (e.g. "ten"), 0-20 only.
+#
+# The first line reproduces the original v0-v2.4 phrasing exactly, as a control —
+# it should still reproduce the known 0/10 failure at target=10, temp=0. Every
+# other line changes only the surface form of the same request.
+Write a greeting with a {target}-word count
+Write a greeting with {target} words
+Write a greeting with exactly {target} words
+Write a {target}-word greeting
+Write a greeting. Word count: {target}
+Write a greeting with {spelledNumber} words
+Write a greeting with exactly {spelledNumber} words

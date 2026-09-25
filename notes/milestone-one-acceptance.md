@@ -92,10 +92,30 @@ The checkpoint-6 notebook entry separates deterministic validation, derived
 analysis verification, and interpretation. README and notebook both distinguish
 checkpoint-4 real-provider evidence from checkpoint-5 runner compatibility.
 
-## 5. Final review and commit — pending
+## 5. Final review and commit — complete
 
-Review the complete diff and repository state, record the acceptance outcome,
-and commit the final review. The user requested commits for all five steps.
+Milestone one is accepted. Review against starting commit `b706ce0` confirms
+that checkpoint 6 changes only the README, lab notebook, this acceptance record,
+and the new derived verification summary. Execution code, prompts, test code,
+package files, and historical artifacts are unchanged. No behavioral change or
+runtime refactoring was needed for acceptance.
+
+`git diff --check` passed. All added relative documentation links resolve, both
+PowerShell command blocks parse successfully, and the retained JSON summary
+contains only passing verification assertions. The working tree was clean after
+step 4; this final record is the only change for step 5. Tests were not repeated
+after documentation-only changes because the tested implementation is unchanged.
+
+| Step | Commit |
+| --- | --- |
+| 1. Requirements audit | `dbfd721` |
+| 2. Deterministic validation | `796e4f0` |
+| 3. Retained-artifact verification | `59984e3` |
+| 4. README and notebook completion | `deca7db` |
+| 5. Final acceptance | The commit introducing this completed section. |
+
+The final structure is documented in the README. No required milestone work
+remains; the limits and deferred capabilities below remain explicit.
 
 ## Validation limits and deferred work
 

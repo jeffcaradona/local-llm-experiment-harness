@@ -1,5 +1,40 @@
 # Lab Notebook
 
+## 2026-09-24 — Milestone one, checkpoint 6
+
+Complete the milestone-one requirements audit and acceptance validation. The
+greeting workload, reusable runner, preserved evidence, and independent analysis
+consumer satisfy the milestone without additional runtime changes. The
+[acceptance record](milestone-one-acceptance.md) maps each requirement to its
+implementation and records the five separately committed acceptance steps.
+
+Observed validation: all 36 deterministic tests and ESLint passed on Windows
+with Node.js v26.1.0 and npm 11.13.0. This includes the mock-provider CLI-to-artifact-
+to-analysis smoke test. No new tests were needed and no model calls were made.
+Node.js 24 and Linux were not rerun during acceptance.
+
+Derived verification: the independent analysis CLI read the historical
+fixed-prompt baseline and checkpoint-4 artifact together, producing 400 records
+in input/attempt order with identical output on repeat execution. Saved verdicts,
+failure reasons (derived for legacy rows), and available telemetry were preserved.
+Each artifact contributes 189 passes and 11 failures; unavailable telemetry
+remains null. Input bytes were unchanged. The
+[verification summary](../results/analysis/checkpoint6-retained-artifact-verification.json)
+records hashes, counts, and assertion outcomes; it is not a new experiment.
+
+Interpretation: milestone one now provides the intended reusable execution seam
+and stable downstream analysis path. The target-10 observation is unchanged;
+its cause remains unestablished. Real-provider validation applies to checkpoint
+4, while checkpoint 5's extraction is supported by deterministic compatibility
+checks. This acceptance does not claim a fresh real-provider reproduction.
+
+Behavioral changes in checkpoint 6: none. Structural changes: acceptance
+documentation, a retained derived verification summary, and README completion
+status and PowerShell reproduction commands. Prompts, execution sources,
+dependencies, and historical artifacts are unchanged. A second production
+workload, broader analysis support, crash-atomic writes, recovery/resume, ML,
+storage, and agent integrations remain deferred.
+
 ## 2026-09-24 — Milestone one, checkpoint 5
 
 Move the remaining sweep, report assembly, and checkpoint lifecycle into

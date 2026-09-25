@@ -1,8 +1,9 @@
 # local-llm-experiment-harness
 
 A Node.js harness for reproducible local LLM experiments. The greeting v2.5
-experiment is the first workload. Milestone one is being implemented in small,
-tested increments, with a manual commit checkpoint after each increment.
+experiment is the first workload. Milestone one's implementation and acceptance
+checks are complete. The [acceptance record](notes/milestone-one-acceptance.md)
+maps requirements to implementation and records validation and remaining limits.
 
 Use Node.js 24 or newer and npm 11. Install development dependencies with
 `npm ci`.
@@ -30,10 +31,18 @@ Runner tests exercise a separate test-only workload, invocation isolation,
 awaited presentation and checkpoints, and fatal checkpoint-write failures.
 The preload uses a file URL so CLI tests also work with Windows drive paths.
 
-To run a real experiment against your local provider:
+Run commands from the repository root. To run a real experiment against your
+local provider in Bash:
 
 ```sh
 BASE_URL=http://localhost:11434/v1 npm run experiment:greeting -- 1
+```
+
+In PowerShell:
+
+```powershell
+$env:BASE_URL = 'http://localhost:11434/v1'
+npm run experiment:greeting -- 1
 ```
 
 The argument is runs per condition (default: 10). Defaults are model
@@ -42,11 +51,40 @@ The seven templates in `./prompt-templates.txt` are swept by default, so the
 example makes 14 generation calls. The provider must support the existing
 `/api/tags` discovery call and `/v1/chat/completions` request.
 
-The historical fixed-prompt sweep can be invoked on Linux with:
+To reproduce the historical fixed-prompt configuration on Linux, use a fresh
+shell and set the provider address for your server:
 
 ```sh
-TARGETS=2,4,6,7,8,9,10,11,12,13 TEMPERATURES=0,0.7 MAX_TOKENS_LIST=3200 PROMPT_TEMPLATES_FILE=/dev/null npm run experiment:greeting -- 10
+BASE_URL=http://localhost:11434/v1 MODEL=nemotron-3-nano:4b \
+TARGETS=2,4,6,7,8,9,10,11,12,13 TEMPERATURES=0,0.7 \
+MAX_TOKENS_LIST=3200 PROMPT_TEMPLATES_FILE=/dev/null \
+BASE_SEED=1 THRESHOLD=0.8 TIMEOUT_MS=180000 OUT_DIR=./results \
+npm run experiment:greeting -- 10
 ```
+
+In a fresh Windows PowerShell session:
+
+```powershell
+$env:BASE_URL = 'http://localhost:11434/v1'
+$env:MODEL = 'nemotron-3-nano:4b'
+$env:TARGETS = '2,4,6,7,8,9,10,11,12,13'
+$env:TEMPERATURES = '0,0.7'
+$env:MAX_TOKENS_LIST = '3200'
+$env:PROMPT_TEMPLATES_FILE = 'NUL'
+$env:BASE_SEED = '1'
+$env:THRESHOLD = '0.8'
+$env:TIMEOUT_MS = '180000'
+$env:OUT_DIR = './results'
+npm run experiment:greeting -- 10
+```
+
+`/dev/null` on Linux and `NUL` on Windows select the single original template
+through the existing empty/missing-file fallback. The Windows fallback was
+observed in the checkpoint-4 validation. This sweep makes 200 generation calls
+across 20 conditions; it can exit `1` for below-threshold outcomes while saving a
+complete artifact. PowerShell environment settings persist in that session;
+close it before running the default template sweep. Matching configuration does
+not guarantee identical output from a different model or serving environment.
 
 An empty or missing template file selects the original single template. Other
 supported environment variables are `MODEL`, `OUT_DIR`, `BASE_SEED`, `THRESHOLD`,
@@ -92,6 +130,7 @@ src/classifier/               Deferred placeholder
 tests/                        CLI and module tests, plus mock provider
 results/                      Experiment evidence
 notes/lab-notebook.md          Human interpretation and migration notes
+notes/milestone-one-acceptance.md Requirement audit and final validation
 models/                       Deferred placeholder
 ```
 
@@ -101,6 +140,25 @@ protection against artifact filename collisions. The experiment CLI still owns
 configuration and greeting-specific console output; checkpoint 5 moves the sweep
 and report assembly into a reusable runner. Machine learning and agent
 integrations are outside milestone one.
+
+## Milestone one acceptance
+
+Checkpoint 6 passed all 36 deterministic tests and ESLint on Windows with Node.js
+v26.1.0 and npm 11.13.0. The suite includes a mock-provider experiment-to-artifact-
+to-analysis smoke test. Independent analysis of the historical fixed-prompt
+baseline and checkpoint-4 artifact emitted 400 ordered records, preserved saved
+verdicts and unavailable telemetry, and left input bytes unchanged. The
+[verification summary](results/analysis/checkpoint6-retained-artifact-verification.json)
+is derived evidence, not an input artifact for the analysis CLI.
+
+Checkpoint 6 changes documentation and adds the verification summary; it changes
+no execution code, prompts, dependencies, or historical artifacts. No new model
+calls were made. Real-provider evidence applies to checkpoint 4, while the
+checkpoint-5 runner is covered by deterministic compatibility tests. Node.js 24
+and Linux were not rerun for this acceptance.
+
+A second production workload and its analysis support, crash-atomic writes,
+recovery, resume, ML, database storage, and agent integrations remain deferred.
 
 ## Checkpoint 5 reusable runner
 

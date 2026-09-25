@@ -79,11 +79,18 @@ following date relative to this notebook's America/Chicago date. This derived
 summary is not a harness artifact and is not an input to `npm run analyze`.
 No historical evidence was rewritten and no new model evidence was collected.
 
-## 4. Documentation — pending
+## 4. Documentation — complete
 
-Mark the milestone complete after validation, document PowerShell reproduction
-commands, and add a notebook entry separating compatibility checks from real
-model evidence.
+The README now marks milestone-one acceptance complete, links this record,
+shows the final repository structure, and supplies explicit Linux and Windows
+PowerShell configurations for the historical 200-attempt sweep. It explains
+template fallback, persistent PowerShell environment settings, and exit status
+1 for below-threshold completed experiments. These commands are documentation;
+no real sweep was run during this checkpoint.
+
+The checkpoint-6 notebook entry separates deterministic validation, derived
+analysis verification, and interpretation. README and notebook both distinguish
+checkpoint-4 real-provider evidence from checkpoint-5 runner compatibility.
 
 ## 5. Final review and commit — pending
 

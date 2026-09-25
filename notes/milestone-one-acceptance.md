@@ -53,12 +53,31 @@ No defects were found and no tests or execution code were changed. These checks
 made no network or model calls. Node.js 24 and Linux were not rerun during this
 acceptance; the validation environment above is the one actually tested.
 
-## 3. Retained-artifact analysis — pending
+## 3. Retained-artifact analysis — complete
 
-Analyze the historical fixed-prompt baseline and checkpoint-4 artifact together.
-Verify record order, saved verdicts, null unavailable telemetry, and unchanged
-input bytes. Retain a compact machine-generated verification summary under
-`results/analysis/`.
+Ran the independent CLI twice against commit `796e4f0`:
+
+```sh
+node src/analysis/analyze-results.mjs results/2026-09-24T00-46-57-104Z.json results/2026-09-24T23-36-45-241Z.json
+```
+
+Both calls exited 0 with empty stderr and identical stdout. Assertions compared
+all 400 emitted records with their saved attempts: input path, row index,
+condition fields, completion status, verdict, failure reason, finish reason, and
+normalized telemetry. Legacy reasons were checked against the documented
+fallback. Both inputs were compared byte-for-byte before and after analysis.
+
+| Input | Records | Passed / failed | Unavailable telemetry |
+| --- | --- | --- | --- |
+| Historical fixed-prompt baseline | 200 | 189 / 11 | Prompt tokens, reasoning tokens, and elapsed time are null in every record. |
+| Checkpoint-4 real-provider artifact | 200 | 189 / 11 | Reasoning tokens are null in every record; prompt tokens and elapsed time are present. |
+
+The [machine-generated verification summary](../results/analysis/checkpoint6-retained-artifact-verification.json)
+retains input hashes before/after, analysis-source hashes, execution identity,
+output hash, counts, and assertion outcomes. Its UTC timestamp may fall on the
+following date relative to this notebook's America/Chicago date. This derived
+summary is not a harness artifact and is not an input to `npm run analyze`.
+No historical evidence was rewritten and no new model evidence was collected.
 
 ## 4. Documentation — pending
 

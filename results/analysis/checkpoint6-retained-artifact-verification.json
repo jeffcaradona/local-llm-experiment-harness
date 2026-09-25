@@ -1,0 +1,80 @@
+{
+  "kind": "milestone-one-retained-artifact-verification",
+  "verifiedAt": "2026-09-25T00:10:27.477Z",
+  "verifiedCommit": "796e4f0",
+  "environment": {
+    "nodeVersion": "v26.1.0",
+    "platform": "win32"
+  },
+  "executionIdentity": {
+    "scriptHash": "5308227bccfcd19a",
+    "harnessHash": "33c0ac727409b904",
+    "sourceHashes": {
+      "greeting-harness-v2.5.mjs": "5308227bccfcd19a",
+      "src/harness/artifact-writer.mjs": "7256ba3225ef073b",
+      "src/harness/provider.mjs": "b8afbb1c739a9f92",
+      "src/harness/runner.mjs": "63a99910806a20e1",
+      "src/harness/source-hash.mjs": "1bb68f41022d5091",
+      "workloads/greeting/workload.mjs": "82356e61383bfc56"
+    }
+  },
+  "command": "node src/analysis/analyze-results.mjs results/2026-09-24T00-46-57-104Z.json results/2026-09-24T23-36-45-241Z.json",
+  "analysisSources": [
+    {
+      "path": "src/analysis/analyze-results.mjs",
+      "sha256": "67cb758d11c6ced5ddb47ce2145aedf2d1adec82cb5ddf38e167061aba67306b"
+    },
+    {
+      "path": "src/analysis/result-records.mjs",
+      "sha256": "bd3c91fe7ded6b6a3853cea585be48cfed7a16b0a6934108c55f4481f1f1deea"
+    }
+  ],
+  "exitCode": 0,
+  "recordCount": 400,
+  "stdoutSha256": "2f5fc39cef14ba3295125795c73d8a062cc5e229237ca154b56ebfa9d2c05436",
+  "checks": {
+    "repeatOutputIdentical": true,
+    "inputAndAttemptOrderPreserved": true,
+    "conditionFieldsPreserved": true,
+    "savedVerdictsPreserved": true,
+    "failureReasonsPreservedOrDerivedForLegacyRows": true,
+    "telemetryPreservedIncludingNull": true,
+    "inputsUnchanged": true
+  },
+  "inputs": [
+    {
+      "path": "results/2026-09-24T00-46-57-104Z.json",
+      "sha256Before": "e1035e1bbd227837f90812298350acd678063383c43d7d207bead1906cb80c4a",
+      "sha256After": "e1035e1bbd227837f90812298350acd678063383c43d7d207bead1906cb80c4a",
+      "unchanged": true,
+      "records": 200,
+      "passed": 189,
+      "failed": 11,
+      "nullTelemetry": {
+        "promptTokens": 200,
+        "completionTokens": 0,
+        "reasoningTokens": 200,
+        "elapsedMs": 200
+      }
+    },
+    {
+      "path": "results/2026-09-24T23-36-45-241Z.json",
+      "sha256Before": "8af8de4596a40db6dac4f9329235187cb4009542b10a16eb35c324e7a79bb0ff",
+      "sha256After": "8af8de4596a40db6dac4f9329235187cb4009542b10a16eb35c324e7a79bb0ff",
+      "unchanged": true,
+      "records": 200,
+      "passed": 189,
+      "failed": 11,
+      "nullTelemetry": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "reasoningTokens": 200,
+        "elapsedMs": 0
+      }
+    }
+  ],
+  "limitations": [
+    "Consumes existing evidence; no new model calls.",
+    "Not a harness artifact; do not pass this summary to the analysis CLI."
+  ]
+}

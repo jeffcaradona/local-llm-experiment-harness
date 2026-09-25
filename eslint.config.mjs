@@ -28,6 +28,7 @@ export default defineConfig([
         fetch: 'readonly',
         process: 'readonly',
         Response: 'readonly',
+        structuredClone: 'readonly',
         URL: 'readonly',
       },
     },

@@ -126,12 +126,13 @@ src/harness/artifact-writer.mjs Exclusive artifact creation and checkpoint write
 src/harness/source-hash.mjs    Identity for all execution source files
 src/analysis/result-records.mjs Artifact validation and pure record extraction
 src/analysis/analyze-results.mjs Independent analysis CLI
-src/classifier/               Deferred placeholder
+src/classifier/dataset.mjs     Pre-run features, FAIL labels, run-based split
+src/classifier/logistic-regression.mjs Standardization and logistic regression
 tests/                        CLI and module tests, plus mock provider
 results/                      Experiment evidence
 notes/lab-notebook.md          Human interpretation and migration notes
 notes/milestone-one-acceptance.md Requirement audit and final validation
-models/                       Deferred placeholder
+models/                       Reserved for versioned classifier models
 ```
 
 Checkpoint 3 adds independent analysis of existing artifacts. Checkpoint 4 adds
@@ -140,6 +141,26 @@ protection against artifact filename collisions. The experiment CLI still owns
 configuration and greeting-specific console output; checkpoint 5 moves the sweep
 and report assembly into a reusable runner. Machine learning and agent
 integrations are outside milestone one.
+
+## Milestone two classifier (in progress)
+
+Milestone two adds a classical classifier that consumes saved results. It asks
+what probability a planned attempt has of failing, using only configuration
+known before the model call. Checkpoint 1 adds the pure dataset and training
+core; the CLIs, metrics, and saved model follow in later checkpoints.
+
+`buildDataset(records)` in `src/classifier/dataset.mjs` accepts records from
+`extractRecords` for one artifact. It never reads raw artifacts or imports
+execution code. FAIL is the positive class and comes only from the recorded
+verdict. Features are `target` and `temperature`, in that order. Runs 1-8 train
+and runs 9-10 evaluate, preserving record order.
+
+The dataset rejects incomplete sweeps, conditions without runs 1-10 exactly
+once, and mixtures of sources, models, `maxTokens`, or templates. Those fields
+are not features, so pooling them would hide differences the model cannot see.
+`trainLogisticRegression` standardizes with training rows only, rejects
+zero-variance features, and requires explicit iterations, learning rate, and L2.
+Training is deterministic.
 
 ## Milestone one acceptance
 

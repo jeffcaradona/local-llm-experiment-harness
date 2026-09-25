@@ -1,5 +1,53 @@
 # Lab Notebook
 
+## 2026-09-25 — Milestone two, checkpoint 1
+
+Begin the first classifier consumer of retained experiment evidence. This
+checkpoint adds the pure core only: the dataset contract and a hand-written
+logistic regression. It adds no CLI, no model artifact, no metrics, and no
+recorded model result.
+
+- Question: can pre-run experiment configuration predict harness failure?
+- Model: binary logistic regression, deterministic full-batch gradient descent.
+- Positive class: FAIL (`passed === false` → 1, `passed === true` → 0). The
+  saved verdict is authoritative; no text is evaluated again.
+- Features, in fixed order: `target`, `temperature`.
+- Split: runs 1-8 train, runs 9-10 evaluate.
+
+Classifier code consumes records from `src/analysis/result-records.mjs` and
+imports no harness, workload, or entry-script code; a test checks this. Outcome
+and post-run fields, `run`, `seed`, `maxTokens`, and template identity are not
+features. Instead, the dataset requires a single source, model, `maxTokens`, and
+template, so unmodeled differences cannot be silently pooled. It also requires a
+complete sweep with runs 1-10 exactly once per condition. Otherwise it fails
+rather than inventing a different split. The seven-template default run
+(`2026-09-24T01-20-38-508Z.json`) is therefore rejected.
+
+Standardization is fitted on the training rows passed to training, using the
+population standard deviation. A zero-variance feature is an error. Training
+has no randomness and no hidden defaults: the caller supplies iterations,
+learning rate, and L2, which penalizes weights but not the intercept.
+
+Observed dataset shape for the historical fixed-prompt baseline
+(`2026-09-24T00-46-57-104Z.json`): 20 conditions, 160 training records with 9
+FAIL, and 40 evaluation records with 2 FAIL. The training failures are
+target 10/temperature 0 runs 1-8 plus target 11/temperature 0.7 run 1. Both
+held-out failures are target 10/temperature 0 (runs 9 and 10). The held-out
+partition is therefore very small and PASS-dominant. It measures unseen
+attempts of known configurations, not unseen targets, models, or prompts.
+
+Validation: all 48 deterministic tests and ESLint passed on Linux with Node.js
+v24.13.0. New tests cover the feature and label contract, the split and its
+rejection cases, training-only standardization, a separable synthetic dataset,
+repeatable parameters, and the import boundary. No model or provider calls were
+made, and no harness code, prompts, or artifacts changed. ESLint now declares
+the `structuredClone` global used by tests.
+
+Next checkpoints: (2) evaluation metrics with the majority baseline and a
+versioned JSON model artifact that refuses to overwrite; (3) train and predict
+CLIs, training on one retained sweep, and recording observed metrics and
+interpretation; (4) milestone acceptance.
+
 ## 2026-09-24 — Milestone one, checkpoint 6
 
 Complete the milestone-one requirements audit and acceptance validation. The

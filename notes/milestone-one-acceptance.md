@@ -31,11 +31,27 @@ artifacts, and analysis independently consumes them. No runtime dependency on
 analysis, classifiers, or agent tooling was found. A second production workload
 is unnecessary for acceptance; the test-only workload demonstrates the seam.
 
-## 2. Deterministic validation — pending
+## 2. Deterministic validation — complete
 
-Run `npm test` and `npm run lint`, including the existing mock-provider
-CLI-to-artifact-to-analysis smoke test. No additional test cases are planned
-unless a concrete defect is discovered.
+Validated commit `dbfd721` on 2026-09-24 using Windows, Node.js v26.1.0, and
+npm 11.13.0:
+
+| Command | Result |
+| --- | --- |
+| `npm test` | Exit 0; 36 passed, 0 failed, 0 skipped. |
+| `npm run lint` | Exit 0; no lint findings. |
+
+The passing suite includes the mock-provider CLI-to-artifact-to-analysis smoke
+test: four saved attempts preserve the pass, word-count mismatch, provider error,
+and missing-telemetry outcomes through independent analysis. Compatibility tests
+also cover the default 140-attempt mock sweep, prompt wording, ordering, seed
+reset, template fallback, thresholds, and fatal errors. Runner tests exercise a
+second test-only workload, isolated invocations, awaited callbacks/checkpoints,
+and fatal persistence failures.
+
+No defects were found and no tests or execution code were changed. These checks
+made no network or model calls. Node.js 24 and Linux were not rerun during this
+acceptance; the validation environment above is the one actually tested.
 
 ## 3. Retained-artifact analysis — pending
 

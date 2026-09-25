@@ -11,6 +11,7 @@
     "experiment:greeting": "node greeting-harness-v2.5.mjs",
     "analyze": "node src/analysis/analyze-results.mjs",
     "test": "node --test",
+    "coverage": "c8 node --test",
     "lint": "eslint ."
   },
   "devDependencies": {

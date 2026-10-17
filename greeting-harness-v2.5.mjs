@@ -40,7 +40,7 @@
 // the other way around.
 //
 // Usage: node greeting-harness-v2.5.mjs [runsPerCondition]
-// Env:   BASE_URL              (default http://redshift:11434/v1)
+// Env:   BASE_URL              (default https://redshift:11434/v1)
 //        MODEL                 (default nemotron-3-nano:4b)
 //        OUT_DIR               (default ./results)
 //        TARGETS               (default "10,8") — 10 = known failure, 8 = control
@@ -55,7 +55,7 @@ import { runExperiment } from './src/harness/runner.mjs';
 import { sourceIdentity } from './src/harness/source-hash.mjs';
 import { greetingWorkload } from './workloads/greeting/workload.mjs';
 
-const BASE_URL = process.env.BASE_URL ?? 'http://redshift:11434/v1';
+const BASE_URL = process.env.BASE_URL ?? 'https://redshift:11434/v1';
 const MODEL = process.env.MODEL ?? 'nemotron-3-nano:4b';
 const OUT_DIR = process.env.OUT_DIR ?? './results';
 const RUNS_PER_CONDITION = Number(process.argv[2] ?? 10);

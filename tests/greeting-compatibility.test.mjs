@@ -78,7 +78,7 @@ test('v2.5 defaults and original prompt wording remain reproducible', async (t) 
   const { status, report } = await runHarness(t, { defaults: true, args: [] });
   assert.equal(status, 1); // The mock always returns two words, not ten or eight.
   assert.equal(report.harness, 'greeting-harness-v2.5');
-  assert.equal(report.environment.baseUrl, 'http://redshift:11434/v1');
+  assert.equal(report.environment.baseUrl, 'https://redshift:11434/v1');
   assert.equal(report.environment.model, 'nemotron-3-nano:4b');
   assert.equal(report.environment.modelDigest, null);
   assert.deepEqual(report.params, {

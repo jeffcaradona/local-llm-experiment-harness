@@ -46,7 +46,7 @@ jobs:
         with:
           args: >-
             -Dsonar.projectKey=jeffcaradona_local-llm-experiment-harness
-            -Dsonar.organization=jeffcaradona
+            -Dsonar.organization=xbe90seup2ltm6gwmugkq
 
   local-sonarqube:
     name: Local SonarQube

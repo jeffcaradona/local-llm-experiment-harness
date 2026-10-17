@@ -13,6 +13,19 @@ npm test
 npm run lint
 ```
 
+## Sonar analysis
+
+The GitHub Actions workflow in `.github/workflows/sonar.yml` runs SonarCloud
+analysis for pushes to `main` and pull requests. Configure the repository
+secret `SONAR_TOKEN` with a SonarCloud token that can analyze
+`jeffcaradona_local-llm-experiment-harness`.
+
+The workflow can also be started manually from the Actions tab. Select
+`local` to analyze `local-llm-experiment-harness` at `http://localhost:9000`.
+That job requires a self-hosted GitHub Actions runner installed on the machine
+where the local SonarQube server is running, plus the repository secret
+`SONARQUBE_TOKEN`.
+
 Linting uses ESLint 10's recommended JavaScript rules with Node.js ESM globals.
 The flat configuration in `eslint.config.mjs` excludes generated artifacts and
 local scratch directories.

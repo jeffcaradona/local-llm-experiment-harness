@@ -95,4 +95,4 @@ jobs:
         with:
           args: >-
             -Dsonar.host.url=http://localhost:9000
-            -Dsonar.projectKey=local-llm-experiment-harness
+            -Dsonar.projectKey=jeffcaradona_local-llm-experiment-harness

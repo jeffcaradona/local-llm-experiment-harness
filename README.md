@@ -21,7 +21,9 @@ secret `SONAR_TOKEN` with a SonarCloud token that can analyze
 `jeffcaradona_local-llm-experiment-harness`.
 
 The workflow can also be started manually from the Actions tab. Select
-`local` to analyze `local-llm-experiment-harness` at `http://localhost:9000`.
+`local` to analyze `jeffcaradona_local-llm-experiment-harness` at
+`http://localhost:9000`. Both servers use the same project key, but their
+analysis histories and issue statuses remain independent.
 That job requires a self-hosted GitHub Actions runner installed on the machine
 where the local SonarQube server is running, plus the repository secret
 `SONARQUBE_TOKEN`.

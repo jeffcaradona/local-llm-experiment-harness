@@ -89,3 +89,6 @@ models/local/
 
 *.bak
 *.tmp
+.vscode/settings.json
+
+.scannerwork/

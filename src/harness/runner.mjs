@@ -83,10 +83,13 @@ export async function runExperiment({ config, workload, identity, onTemplates, o
     const conditionResults = [];
     for (let runIndex = 0; runIndex < runsPerCondition; runIndex++) {
       const condition = { ...dimensions, prompt, seed: baseSeed + runIndex, run: runIndex + 1 };
+      // Keep model attempts sequential to preserve experiment order and avoid concurrent provider load.
       const row = await executeAttempt({ baseUrl, model, timeoutMs, condition, workload });
+      // Finish presentation before recording this row or starting the next attempt.
       await onAttempt?.(row);
       conditionResults.push(row);
       allResults.push(row);
+      // Complete the checkpoint before the next model call; write failures must stop the experiment.
       await artifact.persist(buildReport(false));
     }
     matrix.push({

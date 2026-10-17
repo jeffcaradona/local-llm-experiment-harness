@@ -55,7 +55,7 @@ import { runExperiment } from './src/harness/runner.mjs';
 import { sourceIdentity } from './src/harness/source-hash.mjs';
 import { greetingWorkload } from './workloads/greeting/workload.mjs';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://redshift:11434/v1';
+const BASE_URL = process.env.BASE_URL ?? 'http://redshift:11434/v1';
 const MODEL = process.env.MODEL ?? 'nemotron-3-nano:4b';
 const OUT_DIR = process.env.OUT_DIR ?? './results';
 const RUNS_PER_CONDITION = Number(process.argv[2] ?? 10);

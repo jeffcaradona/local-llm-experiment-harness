@@ -60,7 +60,10 @@ export function extractRecords(artifact, source) {
     const error = optionalString(row.error, `${path}.error`);
     // Legacy files lack a reason. New reasons must agree with the saved verdict
     // and error, without reevaluating text or interpreting a length stop as failure.
-    const legacyReason = row.pass ? null : error !== null ? 'provider_error' : 'word_count_mismatch';
+    let legacyReason = null;
+    if (!row.pass) {
+      legacyReason = error !== null ? 'provider_error' : 'word_count_mismatch';
+    }
     if (row.failureReason !== undefined) {
       requireValue(row.failureReason === legacyReason, `${path}.failureReason`, JSON.stringify(legacyReason));
     }

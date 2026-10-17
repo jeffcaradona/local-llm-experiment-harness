@@ -36,7 +36,7 @@ export function fitStandardization(featureNames, rows) {
     const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
     const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
     const standardDeviation = Math.sqrt(variance);
-    if (!(standardDeviation > 0)) {
+    if (standardDeviation <= 0 || Number.isNaN(standardDeviation)) {
       throw new Error(`feature ${name}: zero variance in training data; cannot standardize`);
     }
     return { name, mean, standardDeviation };

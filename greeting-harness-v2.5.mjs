@@ -111,7 +111,10 @@ async function main() {
   });
   const { matrix, failingConditions } = report;
 
-  console.log(`\n${allPassed ? 'ALL CONDITIONS PASSED' : `${failingConditions.length} condition(s) BELOW THRESHOLD (${THRESHOLD})`}`);
+  const outcomeSummary = allPassed
+    ? 'ALL CONDITIONS PASSED'
+    : `${failingConditions.length} condition(s) BELOW THRESHOLD (${THRESHOLD})`;
+  console.log(`\n${outcomeSummary}`);
 
   // Compare the fixed target=10 rows across templates specifically — this is
   // the actual question this version was built to answer: does the hole move
@@ -130,7 +133,9 @@ async function main() {
   process.exit(allPassed ? 0 : 1);
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error(err);
   process.exit(2);
-});
+}

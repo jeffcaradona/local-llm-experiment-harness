@@ -18,6 +18,8 @@ async function main() {
   for (const path of paths) {
     let artifact;
     try {
+      // Read and validate one artifact at a time to limit peak memory
+      // and report invalid inputs in caller-supplied order.
       artifact = JSON.parse(await readFile(path, 'utf8'));
     } catch (err) {
       throw new Error(`${path}: ${err.message}`, { cause: err });
@@ -27,7 +29,9 @@ async function main() {
   console.log(JSON.stringify(records, null, 2));
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error(err.message);
   process.exitCode = 2;
-});
+}

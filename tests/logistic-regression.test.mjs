@@ -33,6 +33,8 @@ test('standardization uses the supplied rows and rejects zero-variance features'
   ]);
   assert.throws(() => fitStandardization(names, [[2, 0], [4, 0], [6, 0]]),
     /feature temperature: zero variance in training data/);
+  assert.throws(() => fitStandardization(names, []), /feature target: zero variance/);
+  assert.throws(() => fitStandardization(names, [[NaN, 0], [4, 0.7]]), /feature target: zero variance/);
   const constantTarget = [0, 0.7, 0, 0.7].map((t) => ({ features: [10, t], label: 0 }));
   assert.throws(() => trainLogisticRegression(names, constantTarget, options), /feature target: zero variance/);
 });

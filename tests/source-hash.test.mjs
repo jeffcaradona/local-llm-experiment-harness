@@ -17,6 +17,8 @@ test('source identity covers extracted modules and changes when workload source 
     'src/harness/source-hash.mjs',
     'workloads/greeting/workload.mjs',
   ]);
+  assert.equal(original.harnessHash,
+    createHash('sha256').update(JSON.stringify(original.sourceHashes)).digest('hex').slice(0, 16));
   const directory = await mkdtemp(join(tmpdir(), 'harness-identity-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   for (const [path, hash] of Object.entries(original.sourceHashes)) {

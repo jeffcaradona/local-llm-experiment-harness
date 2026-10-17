@@ -16,10 +16,10 @@ const sourcePaths = [
 ];
 
 export async function sourceIdentity() {
-  const sourceHashes = {};
-  for (const path of sourcePaths) {
-    sourceHashes[path] = hash(await readFile(new URL(path, root)));
-  }
+  const hashedSources = await Promise.all(sourcePaths.map(async (path) => [
+    path, hash(await readFile(new URL(path, root))),
+  ]));
+  const sourceHashes = Object.fromEntries(hashedSources);
   return {
     // Retain the original meaning of scriptHash for historical consumers.
     scriptHash: sourceHashes['greeting-harness-v2.5.mjs'],

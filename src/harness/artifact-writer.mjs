@@ -6,7 +6,8 @@ export async function createArtifact(directory, startedAt, initialReport) {
   const stem = startedAt.replace(/[:.]/g, '-');
   const initialJson = JSON.stringify(initialReport, null, 2);
   for (let suffix = 0; ; suffix++) {
-    const path = join(directory, `${stem}${suffix ? `-${suffix}` : ''}.json`);
+    const filenameSuffix = suffix ? `-${suffix}` : '';
+    const path = join(directory, `${stem}${filenameSuffix}.json`);
     try {
       // Claim the filename atomically, including when invocations start together.
       await writeFile(path, initialJson, { flag: 'wx' });
